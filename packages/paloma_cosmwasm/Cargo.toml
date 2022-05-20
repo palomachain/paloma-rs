@@ -1,0 +1,19 @@
+[package]
+name = "paloma-cosmwasm"
+description = "Bindings for CosmWasm contracts to call into custom modules of Paloma Core"
+version = "0.0.1"
+authors = ["Volume Finance"]
+edition = "2021"
+license = "Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/palomachain/palomaswap"
+homepage = "https://github.com/palomachain/palomaswap"
+documentation = "https://github.com/palomachain/palomaswap"
+
+[dependencies]
+cosmwasm-std = "1.0.0"
+schemars = "0.8.8"
+serde = { version = "1.0.137", default-features = false, features = ["derive"] }
+
+[dev-dependencies]
+cosmwasm-schema = "1.0.0"

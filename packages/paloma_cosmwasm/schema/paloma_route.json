@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PalomaRoute",
+  "description": "Represents paloma query route path.",
+  "type": "string",
+  "enum": [
+    "market",
+    "treasury",
+    "oracle",
+    "wasm"
+  ]
+}
