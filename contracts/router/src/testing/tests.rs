@@ -15,7 +15,7 @@ use astroport::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation, MAX_SWAP_OPERATIONS,
 };
-use terra_cosmwasm::{create_swap_msg, create_swap_send_msg};
+use paloma_cosmwasm::{create_swap_msg, create_swap_send_msg};
 
 #[test]
 fn proper_initialization() {

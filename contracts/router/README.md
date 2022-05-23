@@ -1,6 +1,6 @@
 # Astroport Router
 
-The Router contract contains logic to facilitate multi-hop swaps for Terra native & Astroport tokens.
+The Router contract contains logic to facilitate multi-hop swaps for Paloma native & Astroport tokens.
 
 ---
 

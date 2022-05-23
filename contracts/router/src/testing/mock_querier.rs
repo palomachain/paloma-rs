@@ -11,8 +11,8 @@ use astroport::asset::{Asset, AssetInfo, PairInfo};
 use astroport::factory::PairType;
 use astroport::pair::SimulationResponse;
 use cw20::{BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
-use terra_cosmwasm::{
-    SwapResponse, TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute,
+use paloma_cosmwasm::{
+    PalomaQuery, PalomaQueryWrapper, PalomaRoute, SwapResponse, TaxCapResponse, TaxRateResponse,
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -26,7 +26,7 @@ pub enum QueryMsg {
 /// This uses the Astroport CustomQuerier.
 pub fn mock_dependencies(
     contract_balance: &[Coin],
-) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier> {
+) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier, PalomaQueryWrapper> {
     let custom_querier: WasmMockQuerier =
         WasmMockQuerier::new(MockQuerier::new(&[(MOCK_CONTRACT_ADDR, contract_balance)]));
 
@@ -34,11 +34,12 @@ pub fn mock_dependencies(
         storage: MockStorage::default(),
         api: MockApi::default(),
         querier: custom_querier,
+        custom_query_type: Default::default(),
     }
 }
 
 pub struct WasmMockQuerier {
-    base: MockQuerier<TerraQueryWrapper>,
+    base: MockQuerier<PalomaQueryWrapper>,
     token_querier: TokenQuerier,
     tax_querier: TaxQuerier,
     astroport_factory_querier: AstroportFactoryQuerier,
@@ -121,7 +122,7 @@ pub(crate) fn pairs_to_map(pairs: &[(&String, &String)]) -> HashMap<String, Stri
 impl Querier for WasmMockQuerier {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
         // MockQuerier doesn't support Custom, so we ignore it completely here
-        let request: QueryRequest<TerraQueryWrapper> = match from_slice(bin_request) {
+        let request: QueryRequest<PalomaQueryWrapper> = match from_slice(bin_request) {
             Ok(v) => v,
             Err(e) => {
                 return SystemResult::Err(SystemError::InvalidRequest {
@@ -141,18 +142,18 @@ pub enum MockQueryMsg {
 }
 
 impl WasmMockQuerier {
-    pub fn handle_query(&self, request: &QueryRequest<TerraQueryWrapper>) -> QuerierResult {
+    pub fn handle_query(&self, request: &QueryRequest<PalomaQueryWrapper>) -> QuerierResult {
         match &request {
-            QueryRequest::Custom(TerraQueryWrapper { route, query_data }) => {
-                if route == &TerraRoute::Treasury {
+            QueryRequest::Custom(PalomaQueryWrapper { route, query_data }) => {
+                if route == &PalomaRoute::Treasury {
                     match query_data {
-                        TerraQuery::TaxRate {} => {
+                        PalomaQuery::TaxRate {} => {
                             let res = TaxRateResponse {
                                 rate: self.tax_querier.rate,
                             };
                             SystemResult::Ok(ContractResult::from(to_binary(&res)))
                         }
-                        TerraQuery::TaxCap { denom } => {
+                        PalomaQuery::TaxCap { denom } => {
                             let cap = self
                                 .tax_querier
                                 .caps
@@ -164,9 +165,9 @@ impl WasmMockQuerier {
                         }
                         _ => panic!("DO NOT ENTER HERE"),
                     }
-                } else if route == &TerraRoute::Market {
+                } else if route == &PalomaRoute::Market {
                     match query_data {
-                        TerraQuery::Swap {
+                        PalomaQuery::Swap {
                             offer_coin,
                             ask_denom: _,
                         } => {
@@ -278,7 +279,7 @@ impl WasmMockQuerier {
 }
 
 impl WasmMockQuerier {
-    pub fn new(base: MockQuerier<TerraQueryWrapper>) -> Self {
+    pub fn new(base: MockQuerier<PalomaQueryWrapper>) -> Self {
         WasmMockQuerier {
             base,
             token_querier: TokenQuerier::default(),

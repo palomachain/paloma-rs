@@ -10,7 +10,9 @@ use astroport::pair::ExecuteMsg as PairExecuteMsg;
 use astroport::querier::{query_balance, query_pair_info, query_token_balance};
 use astroport::router::SwapOperation;
 use cw20::Cw20ExecuteMsg;
-use terra_cosmwasm::{create_swap_msg, create_swap_send_msg, TerraMsgWrapper};
+use paloma_cosmwasm::{
+    create_swap_msg, create_swap_send_msg, PalomaMsgWrapper, PalomaQueryWrapper,
+};
 
 /// ## Description
 /// Execute a swap operation. Returns a [`ContractError`] on failure, otherwise returns a [`Response`] with the
@@ -26,18 +28,18 @@ use terra_cosmwasm::{create_swap_msg, create_swap_send_msg, TerraMsgWrapper};
 ///
 /// * **to** is an object of type [`Option<String>`]. This is the address that receives the ask assets.
 pub fn execute_swap_operation(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
     operation: SwapOperation,
     to: Option<String>,
     max_spread: Option<Decimal>,
-) -> Result<Response<TerraMsgWrapper>, ContractError> {
+) -> Result<Response<PalomaMsgWrapper>, ContractError> {
     if env.contract.address != info.sender {
         return Err(ContractError::Unauthorized {});
     }
 
-    let messages: Vec<CosmosMsg<TerraMsgWrapper>> = match operation {
+    let messages: Vec<CosmosMsg<PalomaMsgWrapper>> = match operation {
         SwapOperation::NativeSwap {
             offer_denom,
             ask_denom,
@@ -111,7 +113,7 @@ pub fn execute_swap_operation(
 
 /// ## Description
 /// Creates a message of type [`CosmosMsg`] representing a swap operation.
-/// Returns a [`CosmosMsg<TerraMsgWrapper>`] with the specified attributes if the operation was successful.
+/// Returns a [`CosmosMsg<PalomaMsgWrapper>`] with the specified attributes if the operation was successful.
 /// ## Params
 /// * **deps** is an object of type [`DepsMut`].
 ///
@@ -123,12 +125,12 @@ pub fn execute_swap_operation(
 ///
 /// * **to** is an object of type [`Option<String>`]. This is the address that receives the ask assets.
 pub fn asset_into_swap_msg(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     pair_contract: String,
     offer_asset: Asset,
     max_spread: Option<Decimal>,
     to: Option<String>,
-) -> StdResult<CosmosMsg<TerraMsgWrapper>> {
+) -> StdResult<CosmosMsg<PalomaMsgWrapper>> {
     match offer_asset.info.clone() {
         AssetInfo::NativeToken { denom } => {
             // Deduct tax first

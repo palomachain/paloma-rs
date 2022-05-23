@@ -17,8 +17,8 @@ use astroport::router::{
 };
 use cw2::set_contract_version;
 use cw20::Cw20ReceiveMsg;
+use paloma_cosmwasm::{PalomaMsgWrapper, PalomaQuerier, PalomaQueryWrapper, SwapResponse};
 use std::collections::HashMap;
-use terra_cosmwasm::{SwapResponse, TerraMsgWrapper, TerraQuerier};
 
 /// Contract name that is used for migration.
 const CONTRACT_NAME: &str = "astroport-router";
@@ -38,11 +38,11 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// * **msg** is a message of type [`InstantiateMsg`] which contains the basic settings for creating the contract.
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     _env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
-) -> Result<Response<TerraMsgWrapper>, ContractError> {
+) -> Result<Response<PalomaMsgWrapper>, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     CONFIG.save(
@@ -86,11 +86,11 @@ pub fn instantiate(
 ///         }** Checks if an ask amount is higher than or equal to the minimum amount to receive.
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response<TerraMsgWrapper>, ContractError> {
+) -> Result<Response<PalomaMsgWrapper>, ContractError> {
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
         ExecuteMsg::ExecuteSwapOperations {
@@ -141,11 +141,11 @@ pub fn execute(
 ///
 /// * **cw20_msg** is an object of type [`Cw20ReceiveMsg`].
 pub fn receive_cw20(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
-) -> Result<Response<TerraMsgWrapper>, ContractError> {
+) -> Result<Response<PalomaMsgWrapper>, ContractError> {
     let sender = addr_validate_to_lower(deps.api, &cw20_msg.sender)?;
     match from_binary(&cw20_msg.msg)? {
         Cw20HookMsg::ExecuteSwapOperations {
@@ -176,7 +176,7 @@ pub fn receive_cw20(
 
 /// ## Description
 /// Performs swap operations with the specified parameters.
-/// Returns a [`ContractError`] on failure, otherwise returns a [`Response`] with the executable messages of type [`TerraMsgWrapper`]
+/// Returns a [`ContractError`] on failure, otherwise returns a [`Response`] with the executable messages of type [`PalomaMsgWrapper`]
 /// if the operation is successful.
 /// ## Params
 /// * **deps** is an object of type [`DepsMut`].
@@ -194,7 +194,7 @@ pub fn receive_cw20(
 /// * **to** is an object of type [`Option<Addr>`]. This is the recipient of the ask tokens.
 #[allow(clippy::too_many_arguments)]
 pub fn execute_swap_operations(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     _info: MessageInfo,
     sender: Addr,
@@ -202,7 +202,7 @@ pub fn execute_swap_operations(
     minimum_receive: Option<Uint128>,
     to: Option<Addr>,
     max_spread: Option<Decimal>,
-) -> Result<Response<TerraMsgWrapper>, ContractError> {
+) -> Result<Response<PalomaMsgWrapper>, ContractError> {
     let operations_len = operations.len();
     if operations_len == 0 {
         return Err(ContractError::MustProvideOperations {});
@@ -224,7 +224,7 @@ pub fn execute_swap_operations(
     let target_asset_info = operations.last().unwrap().get_target_asset_info();
 
     let mut operation_index = 0;
-    let mut messages: Vec<CosmosMsg<TerraMsgWrapper>> = operations
+    let mut messages: Vec<CosmosMsg<PalomaMsgWrapper>> = operations
         .into_iter()
         .map(|op| {
             operation_index += 1;
@@ -242,7 +242,7 @@ pub fn execute_swap_operations(
                 })?,
             }))
         })
-        .collect::<StdResult<Vec<CosmosMsg<TerraMsgWrapper>>>>()?;
+        .collect::<StdResult<Vec<CosmosMsg<PalomaMsgWrapper>>>>()?;
 
     // Execute minimum amount assertion
     if let Some(minimum_receive) = minimum_receive {
@@ -277,12 +277,12 @@ pub fn execute_swap_operations(
 ///
 /// * **receiver** is an object of type [`Addr`]. This is the address that received `ask` assets.
 fn assert_minimum_receive(
-    deps: Deps,
+    deps: Deps<PalomaQueryWrapper>,
     asset_info: AssetInfo,
     prev_balance: Uint128,
     minimum_receive: Uint128,
     receiver: Addr,
-) -> Result<Response<TerraMsgWrapper>, ContractError> {
+) -> Result<Response<PalomaMsgWrapper>, ContractError> {
     asset_info.check(deps.api)?;
     let receiver_balance = asset_info.query_pool(&deps.querier, receiver)?;
     let swap_amount = receiver_balance.checked_sub(prev_balance)?;
@@ -313,7 +313,11 @@ fn assert_minimum_receive(
 ///             operations,
 ///         }** Simulates one or multiple swap operations and returns the end result in a [`SimulateSwapOperationsResponse`] object.
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(
+    deps: Deps<PalomaQueryWrapper>,
+    _env: Env,
+    msg: QueryMsg,
+) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Config {} => Ok(to_binary(&query_config(deps)?)?),
         QueryMsg::SimulateSwapOperations {
@@ -331,7 +335,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
 /// Returns a [`ContractError`] on failure, otherwise returns general contract settings in a [`ConfigResponse`] object.
 /// ## Params
 /// * **deps** is an object of type [`Deps`].
-pub fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
+pub fn query_config(deps: Deps<PalomaQueryWrapper>) -> Result<ConfigResponse, ContractError> {
     let state = CONFIG.load(deps.storage)?;
     let resp = ConfigResponse {
         astroport_factory: state.astroport_factory.into_string(),
@@ -364,13 +368,13 @@ pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Respons
 /// * **operations** is a vector that contains objects of type [`SwapOperation`].
 /// These are all the swap operations for which we perform a simulation.
 fn simulate_swap_operations(
-    deps: Deps,
+    deps: Deps<PalomaQueryWrapper>,
     offer_amount: Uint128,
     operations: Vec<SwapOperation>,
 ) -> Result<SimulateSwapOperationsResponse, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
     let astroport_factory = config.astroport_factory;
-    let terra_querier = TerraQuerier::new(&deps.querier);
+    let terra_querier = PalomaQuerier::new(&deps.querier);
 
     let operations_len = operations.len();
     if operations_len == 0 {
@@ -512,7 +516,7 @@ fn assert_operations(api: &dyn Api, operations: &[SwapOperation]) -> Result<(), 
 #[test]
 fn test_invalid_operations() {
     use cosmwasm_std::testing::mock_dependencies;
-    let deps = mock_dependencies(&[]);
+    let deps = mock_dependencies();
     // Empty error
     assert_eq!(true, assert_operations(deps.as_ref().api, &vec![]).is_err());
 
