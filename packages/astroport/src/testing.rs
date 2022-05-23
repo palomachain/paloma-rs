@@ -343,12 +343,12 @@ fn test_decimal_checked_ops() {
         let dec = Decimal::from_ratio(i, 1u128);
         assert_eq!(
             dec * Uint128::new(i),
-            dec.checked_mul(Uint128::new(i)).unwrap()
+            DecimalCheckedOps::checked_mul_u128(dec, Uint128::new(i)).unwrap()
         );
     }
-    assert!(
-        Decimal::from_ratio(Uint128::MAX, Uint128::from(10u128.pow(18u32)))
-            .checked_mul(Uint128::from(10u128.pow(18u32) + 1))
-            .is_err()
-    );
+    assert!(DecimalCheckedOps::checked_mul_u128(
+        Decimal::from_ratio(Uint128::MAX, Uint128::from(10u128.pow(18u32))),
+        Uint128::from(10u128.pow(18u32) + 1)
+    )
+    .is_err());
 }

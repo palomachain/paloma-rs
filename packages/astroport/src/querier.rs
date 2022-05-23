@@ -11,6 +11,7 @@ use cosmwasm_std::{
 };
 
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
+use paloma_cosmwasm::PalomaQueryWrapper;
 
 // It's defined at https://github.com/terra-money/core/blob/d8e277626e74f9d6417dcd598574686882f0274c/types/assets/assets.go#L15
 const NATIVE_TOKEN_PRECISION: u8 = 6;
@@ -23,7 +24,7 @@ const NATIVE_TOKEN_PRECISION: u8 = 6;
 ///
 /// * **denom** is an object of type [`String`] used to specify the denomination used to return the balance (e.g uluna).
 pub fn query_balance(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<PalomaQueryWrapper>,
     account_addr: Addr,
     denom: String,
 ) -> StdResult<Uint128> {
@@ -39,7 +40,10 @@ pub fn query_balance(
 /// * **querier** is an object of type [`QuerierWrapper`].
 ///
 /// * **account_addr** is an object of type [`Addr`] which is the address for which we query balances.
-pub fn query_all_balances(querier: &QuerierWrapper, account_addr: Addr) -> StdResult<Vec<Coin>> {
+pub fn query_all_balances(
+    querier: &QuerierWrapper<PalomaQueryWrapper>,
+    account_addr: Addr,
+) -> StdResult<Vec<Coin>> {
     let all_balances: AllBalanceResponse =
         querier.query(&QueryRequest::Bank(BankQuery::AllBalances {
             address: String::from(account_addr),
@@ -55,7 +59,7 @@ pub fn query_all_balances(querier: &QuerierWrapper, account_addr: Addr) -> StdRe
 ///
 /// * **account_addr** is an object of type [`Addr`] for which we query the token balance for.
 pub fn query_token_balance(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<PalomaQueryWrapper>,
     contract_addr: Addr,
     account_addr: Addr,
 ) -> StdResult<Uint128> {
@@ -79,7 +83,10 @@ pub fn query_token_balance(
 /// * **querier** is an object of type [`QuerierWrapper`].
 ///
 /// * **contract_addr** is an object of type [`Addr`] which is the token contract address.
-pub fn query_token_symbol(querier: &QuerierWrapper, contract_addr: Addr) -> StdResult<String> {
+pub fn query_token_symbol(
+    querier: &QuerierWrapper<PalomaQueryWrapper>,
+    contract_addr: Addr,
+) -> StdResult<String> {
     let res: TokenInfoResponse = querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: String::from(contract_addr),
         msg: to_binary(&Cw20QueryMsg::TokenInfo {})?,
@@ -93,7 +100,10 @@ pub fn query_token_symbol(querier: &QuerierWrapper, contract_addr: Addr) -> StdR
 /// * **querier** is an object of type [`QuerierWrapper`].
 ///
 /// * **contract_addr** is an object of type [`Addr`] which is the token contract address.
-pub fn query_supply(querier: &QuerierWrapper, contract_addr: Addr) -> StdResult<Uint128> {
+pub fn query_supply(
+    querier: &QuerierWrapper<PalomaQueryWrapper>,
+    contract_addr: Addr,
+) -> StdResult<Uint128> {
     let res: TokenInfoResponse = querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: String::from(contract_addr),
         msg: to_binary(&Cw20QueryMsg::TokenInfo {})?,
@@ -176,7 +186,7 @@ pub fn query_fee_info(
 ///
 /// * **asset_infos** is an array that contains two items of type [`AssetInfo`].
 pub fn query_pair_info(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<PalomaQueryWrapper>,
     factory_contract: Addr,
     asset_infos: &[AssetInfo; 2],
 ) -> StdResult<PairInfo> {

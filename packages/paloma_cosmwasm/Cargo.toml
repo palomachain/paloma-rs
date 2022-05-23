@@ -12,7 +12,7 @@ documentation = "https://github.com/palomachain/palomaswap"
 
 [dependencies]
 cosmwasm-std = "1.0.0"
-schemars = "0.8.8"
+schemars = "0.8.10"
 serde = { version = "1.0.137", default-features = false, features = ["derive"] }
 
 [dev-dependencies]

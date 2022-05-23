@@ -10,7 +10,7 @@ use cosmwasm_std::{
     StdError, StdResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, MinterResponse};
-use terra_cosmwasm::TerraQuerier;
+use paloma_cosmwasm::{PalomaQuerier, PalomaQueryWrapper};
 
 /// UST token denomination
 pub const UUSD_DENOM: &str = "uusd";
@@ -49,10 +49,10 @@ impl Asset {
     /// * **self** is the type of the caller object.
     ///
     /// * **querier** is an object of type [`QuerierWrapper`]
-    pub fn compute_tax(&self, querier: &QuerierWrapper) -> StdResult<Uint128> {
+    pub fn compute_tax(&self, querier: &QuerierWrapper<PalomaQueryWrapper>) -> StdResult<Uint128> {
         let amount = self.amount;
         if let AssetInfo::NativeToken { denom } = &self.info {
-            let terra_querier = TerraQuerier::new(querier);
+            let terra_querier = PalomaQuerier::new(querier);
             let tax_rate: Decimal = (terra_querier.query_tax_rate()?).rate;
             let tax_cap: Uint128 = (terra_querier.query_tax_cap(denom.to_string())?).cap;
             Ok(std::cmp::min(
@@ -72,7 +72,7 @@ impl Asset {
     /// * **self** is the type of the caller object.
     ///
     /// * **querier** is an object of type [`QuerierWrapper`]
-    pub fn deduct_tax(&self, querier: &QuerierWrapper) -> StdResult<Coin> {
+    pub fn deduct_tax(&self, querier: &QuerierWrapper<PalomaQueryWrapper>) -> StdResult<Coin> {
         let amount = self.amount;
         if let AssetInfo::NativeToken { denom } = &self.info {
             Ok(Coin {
@@ -96,7 +96,11 @@ impl Asset {
     /// * **querier** is an object of type [`QuerierWrapper`]
     ///
     /// * **recipient** is the address where the funds will be sent.
-    pub fn into_msg(self, querier: &QuerierWrapper, recipient: Addr) -> StdResult<CosmosMsg> {
+    pub fn into_msg(
+        self,
+        querier: &QuerierWrapper<PalomaQueryWrapper>,
+        recipient: Addr,
+    ) -> StdResult<CosmosMsg> {
         let amount = self.amount;
 
         match &self.info {
@@ -186,7 +190,11 @@ impl AssetInfo {
     /// * **self** is the type of the caller object.
     ///
     /// * **pool_addr** is the address of the contract whose token balance we check.
-    pub fn query_pool(&self, querier: &QuerierWrapper, pool_addr: Addr) -> StdResult<Uint128> {
+    pub fn query_pool(
+        &self,
+        querier: &QuerierWrapper<PalomaQueryWrapper>,
+        pool_addr: Addr,
+    ) -> StdResult<Uint128> {
         match self {
             AssetInfo::Token { contract_addr, .. } => {
                 query_token_balance(querier, contract_addr.clone(), pool_addr)
@@ -280,7 +288,7 @@ impl PairInfo {
     /// * **contract_addr** is pair's pool address.
     pub fn query_pools(
         &self,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<PalomaQueryWrapper>,
         contract_addr: Addr,
     ) -> StdResult<[Asset; 2]> {
         Ok([
@@ -320,7 +328,7 @@ const TOKEN_SYMBOL_MAX_LENGTH: usize = 4;
 /// * **querier** is an object of type [`QuerierWrapper`].
 pub fn format_lp_token_name(
     asset_infos: [AssetInfo; 2],
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<PalomaQueryWrapper>,
 ) -> StdResult<String> {
     let mut short_symbols: Vec<String> = vec![];
     for asset_info in asset_infos {

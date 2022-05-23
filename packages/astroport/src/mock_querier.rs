@@ -9,13 +9,15 @@ use std::collections::HashMap;
 use crate::asset::PairInfo;
 use crate::factory::QueryMsg as FactoryQueryMsg;
 use cw20::{BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
-use terra_cosmwasm::{TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute};
+use paloma_cosmwasm::{
+    PalomaQuery, PalomaQueryWrapper, PalomaRoute, TaxCapResponse, TaxRateResponse,
+};
 
 /// mock_dependencies is a drop-in replacement for cosmwasm_std::testing::mock_dependencies
 /// This uses the Astroport CustomQuerier.
 pub fn mock_dependencies(
     contract_balance: &[Coin],
-) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier> {
+) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier, PalomaQueryWrapper> {
     let custom_querier: WasmMockQuerier =
         WasmMockQuerier::new(MockQuerier::new(&[(MOCK_CONTRACT_ADDR, contract_balance)]));
 
@@ -23,6 +25,7 @@ pub fn mock_dependencies(
         storage: MockStorage::default(),
         api: MockApi::default(),
         querier: custom_querier,
+        custom_query_type: Default::default(),
     }
 }
 enum QueryHandler {
@@ -116,7 +119,7 @@ pub(crate) fn pairs_to_map(pairs: &[(&String, &PairInfo)]) -> HashMap<String, Pa
 impl Querier for WasmMockQuerier {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
         // MockQuerier doesn't support Custom, so we ignore it completely here
-        let request: QueryRequest<TerraQueryWrapper> = match from_slice(bin_request) {
+        let request: QueryRequest<PalomaQueryWrapper> = match from_slice(bin_request) {
             Ok(v) => v,
             Err(e) => {
                 return SystemResult::Err(SystemError::InvalidRequest {
@@ -130,7 +133,7 @@ impl Querier for WasmMockQuerier {
 }
 
 impl WasmMockQuerier {
-    pub fn handle_query(&self, request: &QueryRequest<TerraQueryWrapper>) -> QuerierResult {
+    pub fn handle_query(&self, request: &QueryRequest<PalomaQueryWrapper>) -> QuerierResult {
         match self.handler {
             QueryHandler::Default => self.query_handler.execute(request),
             QueryHandler::Cw20 => self.cw20_query_handler.execute(request),
@@ -143,7 +146,7 @@ struct CW20QueryHandler {
 }
 
 impl CW20QueryHandler {
-    pub fn execute(&self, request: &QueryRequest<TerraQueryWrapper>) -> QuerierResult {
+    pub fn execute(&self, request: &QueryRequest<PalomaQueryWrapper>) -> QuerierResult {
         match &request {
             QueryRequest::Wasm(WasmQuery::Smart { contract_addr, msg }) => {
                 match from_binary(&msg).unwrap() {
@@ -199,24 +202,24 @@ impl CW20QueryHandler {
 }
 
 struct DefaultQueryHandler {
-    base: MockQuerier<TerraQueryWrapper>,
+    base: MockQuerier<PalomaQueryWrapper>,
     tax_querier: TaxQuerier,
     astroport_factory_querier: AstroportFactoryQuerier,
 }
 
 impl DefaultQueryHandler {
-    pub fn execute(&self, request: &QueryRequest<TerraQueryWrapper>) -> QuerierResult {
+    pub fn execute(&self, request: &QueryRequest<PalomaQueryWrapper>) -> QuerierResult {
         match &request {
-            QueryRequest::Custom(TerraQueryWrapper { route, query_data }) => {
-                if &TerraRoute::Treasury == route {
+            QueryRequest::Custom(PalomaQueryWrapper { route, query_data }) => {
+                if &PalomaRoute::Treasury == route {
                     match query_data {
-                        TerraQuery::TaxRate {} => {
+                        PalomaQuery::TaxRate {} => {
                             let res = TaxRateResponse {
                                 rate: self.tax_querier.rate,
                             };
                             SystemResult::Ok(to_binary(&res).into())
                         }
-                        TerraQuery::TaxCap { denom } => {
+                        PalomaQuery::TaxCap { denom } => {
                             let cap = self
                                 .tax_querier
                                 .caps
@@ -254,7 +257,7 @@ impl DefaultQueryHandler {
 }
 
 impl WasmMockQuerier {
-    pub fn new(base: MockQuerier<TerraQueryWrapper>) -> Self {
+    pub fn new(base: MockQuerier<PalomaQueryWrapper>) -> Self {
         WasmMockQuerier {
             query_handler: DefaultQueryHandler {
                 base,
