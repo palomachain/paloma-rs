@@ -5,6 +5,7 @@ use crate::asset::{Asset, AssetInfo};
 
 use cosmwasm_std::{from_slice, Addr, Binary, Decimal, Deps, StdResult, Uint128};
 use cw20::Cw20ReceiveMsg;
+use paloma_cosmwasm::PalomaQueryWrapper;
 
 /// The default swap slippage
 pub const DEFAULT_SLIPPAGE: &str = "0.005";
@@ -173,7 +174,11 @@ pub enum StablePoolUpdateParams {
     StopChangingAmp {},
 }
 
-pub fn migration_check(deps: Deps, factory: &Addr, pair_addr: &Addr) -> StdResult<bool> {
+pub fn migration_check(
+    deps: Deps<PalomaQueryWrapper>,
+    factory: &Addr,
+    pair_addr: &Addr,
+) -> StdResult<bool> {
     if let Some(res) = &deps
         .querier
         .query_wasm_raw(factory, b"pairs_to_migrate".as_slice())?

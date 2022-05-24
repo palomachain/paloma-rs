@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    attr, from_binary, to_binary, Addr, ContractResult, Reply, ReplyOn, SubMsg,
-    SubMsgExecutionResponse, WasmMsg,
+    attr, from_binary, to_binary, Addr, Binary, Reply, ReplyOn, SubMsg, SubMsgResponse,
+    SubMsgResult, WasmMsg,
 };
 
 use crate::mock_querier::mock_dependencies;
@@ -550,9 +550,9 @@ fn register() {
 
     let reply_msg = Reply {
         id: 1,
-        result: ContractResult::Ok(SubMsgExecutionResponse {
+        result: SubMsgResult::Ok(SubMsgResponse {
             events: vec![],
-            data: Some(data.into()),
+            data: Some(Binary::from(data)),
         }),
     };
 
@@ -626,9 +626,9 @@ fn register() {
 
     let reply_msg_2 = Reply {
         id: 1,
-        result: ContractResult::Ok(SubMsgExecutionResponse {
+        result: SubMsgResult::Ok(SubMsgResponse {
             events: vec![],
-            data: Some(data.into()),
+            data: Some(Binary::from(data)),
         }),
     };
 

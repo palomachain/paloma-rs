@@ -135,7 +135,7 @@ pub fn query_token_precision(querier: &QuerierWrapper, asset_info: AssetInfo) ->
 ///
 /// * **factory_contract** is an object of type [`Addr`] which is the Astroport factory contract address.
 pub fn query_factory_config(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<PalomaQueryWrapper>,
     factory_contract: Addr,
 ) -> StdResult<FactoryConfigResponse> {
     querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
@@ -162,7 +162,7 @@ pub struct FeeInfo {
 ///
 /// * **pair_type** is an object of type [`PairType`]. This is the pair type we return information for.
 pub fn query_fee_info(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<PalomaQueryWrapper>,
     factory_contract: Addr,
     pair_type: PairType,
 ) -> StdResult<FeeInfo> {

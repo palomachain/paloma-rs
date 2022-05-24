@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-#    "contracts/factory",
-#    "contracts/pair",
+    "contracts/factory",
+    "contracts/pair",
 #    "contracts/pair_anchor",
 #    "contracts/pair_stable",
 #    "contracts/pair_stable_bluna",

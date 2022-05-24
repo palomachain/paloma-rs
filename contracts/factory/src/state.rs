@@ -74,7 +74,8 @@ pub fn read_pairs(
     limit: Option<u32>,
 ) -> Vec<Addr> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start = calc_range_start(start_after).map(Bound::exclusive);
+    let start = calc_range_start(start_after);
+    let start = start.as_deref().map(Bound::exclusive);
 
     PAIRS
         .range(deps.storage, start, None, Order::Ascending)
@@ -92,16 +93,11 @@ pub fn read_pairs(
 /// `start_after` is an [`Option`] type that accepts two [`AssetInfo`] elements.
 /// It is the token pair which we use to determine the start index for a range when returning data for multiple pairs
 fn calc_range_start(start_after: Option<[AssetInfo; 2]>) -> Option<Vec<u8>> {
-    start_after.map(|asset_infos| {
-        let mut asset_infos = asset_infos.to_vec();
+    start_after.map(|mut asset_infos| {
         asset_infos.sort_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
-
-        let mut v = [asset_infos[0].as_bytes(), asset_infos[1].as_bytes()]
+        [asset_infos[0].as_bytes(), asset_infos[1].as_bytes(), &[1]]
             .concat()
-            .as_slice()
-            .to_vec();
-        v.push(1);
-        v
+            .to_vec()
     })
 }
 
