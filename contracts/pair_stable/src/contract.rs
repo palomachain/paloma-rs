@@ -5,11 +5,10 @@ use crate::math::{
 };
 use crate::state::{Config, CONFIG};
 
-use cosmwasm_bignumber::Decimal256;
 use cosmwasm_std::{
-    attr, entry_point, from_binary, to_binary, Addr, Binary, CosmosMsg, Decimal, Deps, DepsMut,
-    Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, Uint64,
-    WasmMsg,
+    attr, entry_point, from_binary, to_binary, Addr, Binary, CosmosMsg, Decimal, Decimal256, Deps,
+    DepsMut, Env, Isqrt, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg,
+    Uint128, Uint256, Uint64, WasmMsg,
 };
 
 use crate::response::MsgInstantiateContractResponse;
@@ -22,6 +21,7 @@ use astroport::pair::{
     DEFAULT_SLIPPAGE, MAX_ALLOWED_SLIPPAGE, TWAP_PRECISION,
 };
 
+use astroport::math::{to_decimal, to_decimal256};
 use astroport::pair::{
     CumulativePricesResponse, Cw20HookMsg, ExecuteMsg, MigrateMsg, PoolResponse, QueryMsg,
     ReverseSimulationResponse, SimulationResponse, StablePoolConfig,
@@ -29,9 +29,10 @@ use astroport::pair::{
 use astroport::querier::{
     query_factory_config, query_fee_info, query_supply, query_token_precision,
 };
-use astroport::{token::InstantiateMsg as TokenInstantiateMsg, U256};
+use astroport::token;
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
+use paloma_cosmwasm::PalomaQueryWrapper;
 use protobuf::Message;
 use std::cmp::Ordering;
 use std::str::FromStr;
@@ -57,7 +58,7 @@ const INSTANTIATE_TOKEN_REPLY_ID: u64 = 1;
 /// * **msg** is a message of type [`InstantiateMsg`] which contains the parameters for creating the contract.
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
@@ -106,7 +107,7 @@ pub fn instantiate(
     let sub_msg: Vec<SubMsg> = vec![SubMsg {
         msg: WasmMsg::Instantiate {
             code_id: msg.token_code_id,
-            msg: to_binary(&TokenInstantiateMsg {
+            msg: to_binary(&token::InstantiateMsg {
                 name: token_name,
                 symbol: "uLP".to_string(),
                 decimals: 6,
@@ -138,7 +139,11 @@ pub fn instantiate(
 ///
 /// * **msg** is an object of type [`Reply`]. This is the reply from the submessage.
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+pub fn reply(
+    deps: DepsMut<PalomaQueryWrapper>,
+    _env: Env,
+    msg: Reply,
+) -> Result<Response, ContractError> {
     let mut config: Config = CONFIG.load(deps.storage)?;
 
     if config.pair_info.liquidity_token != Addr::unchecked("") {
@@ -192,7 +197,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
 ///         }** Performs an swap using the specified parameters.
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -264,7 +269,7 @@ pub fn execute(
 ///
 /// * **cw20_msg** is an object of type [`Cw20ReceiveMsg`]. This is the CW20 receive message to process.
 pub fn receive_cw20(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
@@ -345,7 +350,7 @@ pub fn receive_cw20(
 /// If this address isn't specified, the function will default to the caller.
 /// NOTE - the address that wants to provide liquidity should approve the pair contract to pull its relevant tokens.
 pub fn provide_liquidity(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
     assets: [Asset; 2],
@@ -432,11 +437,10 @@ pub fn provide_liquidity(
 
         // Initial share = collateral amount
         adjust_precision(
-            Uint128::new(
-                (U256::from(deposit_amount_0.u128()) * U256::from(deposit_amount_1.u128()))
-                    .integer_sqrt()
-                    .as_u128(),
-            ),
+            (Uint256::from(deposit_amount_0.u128()) * Uint256::from(deposit_amount_1.u128()))
+                .isqrt()
+                .try_into()
+                .unwrap(),
             greater_precision,
             liquidity_token_precision,
         )?
@@ -524,7 +528,7 @@ pub fn provide_liquidity(
 ///
 /// * **auto_stake** is a field of type [`bool`]. Determines whether or not LP tokens will be automatically staked in the Generator contract.
 fn mint_liquidity_token_message(
-    deps: Deps,
+    deps: Deps<PalomaQueryWrapper>,
     config: &Config,
     env: Env,
     recipient: Addr,
@@ -588,7 +592,7 @@ fn mint_liquidity_token_message(
 ///
 /// * **amount** is an object of type [`Uint128`]. This is the amount of LP tokens to burn and withdraw liquidity with.
 pub fn withdraw_liquidity(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
     sender: Addr,
@@ -700,7 +704,7 @@ pub fn get_share_in_assets(
 /// NOTE - the address that wants to swap should approve the pair contract to pull the offer token.
 #[allow(clippy::too_many_arguments)]
 pub fn swap(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
     sender: Addr,
@@ -954,7 +958,7 @@ pub fn calculate_maker_fee(
 ///
 /// * **QueryMsg::Config {}** Returns the configuration for the pair contract using a [`ConfigResponse`] object.
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps<PalomaQueryWrapper>, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Pair {} => to_binary(&query_pair_info(deps)?),
         QueryMsg::Pool {} => to_binary(&query_pool(deps)?),
@@ -975,7 +979,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 /// Returns information about the pair contract in an object of type [`PairInfo`].
 /// ## Params
 /// * **deps** is an object of type [`Deps`].
-pub fn query_pair_info(deps: Deps) -> StdResult<PairInfo> {
+pub fn query_pair_info(deps: Deps<PalomaQueryWrapper>) -> StdResult<PairInfo> {
     let config: Config = CONFIG.load(deps.storage)?;
     Ok(config.pair_info)
 }
@@ -985,7 +989,7 @@ pub fn query_pair_info(deps: Deps) -> StdResult<PairInfo> {
 /// tokens currently minted in an object of type [`PoolResponse`].
 /// ## Params
 /// * **deps** is an object of type [`Deps`].
-pub fn query_pool(deps: Deps) -> StdResult<PoolResponse> {
+pub fn query_pool(deps: Deps<PalomaQueryWrapper>) -> StdResult<PoolResponse> {
     let config: Config = CONFIG.load(deps.storage)?;
     let (assets, total_share) = pool_info(deps, config)?;
 
@@ -1004,7 +1008,7 @@ pub fn query_pool(deps: Deps) -> StdResult<PoolResponse> {
 /// * **deps** is an object of type [`Deps`].
 ///
 /// * **amount** is an object of type [`Uint128`]. This is the amount of LP tokens for which we calculate associated amounts of assets.
-pub fn query_share(deps: Deps, amount: Uint128) -> StdResult<[Asset; 2]> {
+pub fn query_share(deps: Deps<PalomaQueryWrapper>, amount: Uint128) -> StdResult<[Asset; 2]> {
     let config: Config = CONFIG.load(deps.storage)?;
     let (pools, total_share) = pool_info(deps, config)?;
     let refund_assets = get_share_in_assets(&pools, amount, total_share);
@@ -1020,7 +1024,11 @@ pub fn query_share(deps: Deps, amount: Uint128) -> StdResult<[Asset; 2]> {
 /// * **env** is an object of type [`Env`].
 ///
 /// * **offer_asset** is an object of type [`Asset`]. This is the asset to swap as well as an amount of the said asset.
-pub fn query_simulation(deps: Deps, env: Env, offer_asset: Asset) -> StdResult<SimulationResponse> {
+pub fn query_simulation(
+    deps: Deps<PalomaQueryWrapper>,
+    env: Env,
+    offer_asset: Asset,
+) -> StdResult<SimulationResponse> {
     let config: Config = CONFIG.load(deps.storage)?;
     let contract_addr = config.pair_info.contract_addr.clone();
 
@@ -1074,7 +1082,7 @@ pub fn query_simulation(deps: Deps, env: Env, offer_asset: Asset) -> StdResult<S
 /// * **ask_asset** is an object of type [`Asset`]. This is the asset to swap to as well as the desired
 /// amount of ask assets to receive from the swap.
 pub fn query_reverse_simulation(
-    deps: Deps,
+    deps: Deps<PalomaQueryWrapper>,
     env: Env,
     ask_asset: Asset,
 ) -> StdResult<ReverseSimulationResponse> {
@@ -1127,7 +1135,10 @@ pub fn query_reverse_simulation(
 /// * **deps** is an object of type [`Deps`].
 ///
 /// * **env** is an object of type [`Env`].
-pub fn query_cumulative_prices(deps: Deps, env: Env) -> StdResult<CumulativePricesResponse> {
+pub fn query_cumulative_prices(
+    deps: Deps<PalomaQueryWrapper>,
+    env: Env,
+) -> StdResult<CumulativePricesResponse> {
     let config: Config = CONFIG.load(deps.storage)?;
     let (assets, total_share) = pool_info(deps, config.clone())?;
 
@@ -1160,7 +1171,7 @@ pub fn query_cumulative_prices(deps: Deps, env: Env) -> StdResult<CumulativePric
 /// Returns the pair contract configuration in a [`ConfigResponse`] object.
 /// ## Params
 /// * **deps** is an object of type [`Deps`].
-pub fn query_config(deps: Deps, env: Env) -> StdResult<ConfigResponse> {
+pub fn query_config(deps: Deps<PalomaQueryWrapper>, env: Env) -> StdResult<ConfigResponse> {
     let config: Config = CONFIG.load(deps.storage)?;
     Ok(ConfigResponse {
         block_time_last: config.block_time_last,
@@ -1251,8 +1262,8 @@ fn compute_offer_amount(
     let ask_pool = adjust_precision(ask_pool, ask_precision, greater_precision)?;
     let ask_amount = adjust_precision(ask_amount, ask_precision, greater_precision)?;
 
-    let one_minus_commission = Decimal256::one() - Decimal256::from(commission_rate);
-    let inv_one_minus_commission: Decimal = (Decimal256::one() / one_minus_commission).into();
+    let one_minus_commission = Decimal256::one() - to_decimal256(commission_rate);
+    let inv_one_minus_commission: Decimal = to_decimal(Decimal256::one() / one_minus_commission);
     let before_commission_deduction = ask_amount * inv_one_minus_commission;
 
     let offer_amount = Uint128::new(
@@ -1333,7 +1344,7 @@ pub fn assert_max_spread(
 
     if let Some(belief_price) = belief_price {
         let expected_return =
-            offer_amount * Decimal::from(Decimal256::one() / Decimal256::from(belief_price));
+            offer_amount * to_decimal(Decimal256::one() / to_decimal256(belief_price));
         let spread_amount = expected_return
             .checked_sub(return_amount)
             .unwrap_or_else(|_| Uint128::zero());
@@ -1387,7 +1398,10 @@ pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Respons
 /// * **deps** is an object of type [`Deps`].
 ///
 /// * **config** is an object of type [`Config`].
-pub fn pool_info(deps: Deps, config: Config) -> StdResult<([Asset; 2], Uint128)> {
+pub fn pool_info(
+    deps: Deps<PalomaQueryWrapper>,
+    config: Config,
+) -> StdResult<([Asset; 2], Uint128)> {
     let contract_addr = config.pair_info.contract_addr.clone();
     let pools: [Asset; 2] = config.pair_info.query_pools(&deps.querier, contract_addr)?;
     let total_share: Uint128 = query_supply(&deps.querier, config.pair_info.liquidity_token)?;
@@ -1408,7 +1422,7 @@ pub fn pool_info(deps: Deps, config: Config) -> StdResult<([Asset; 2], Uint128)>
 ///
 /// * **params** is an object of type [`Binary`]. These are the the new parameter values.
 pub fn update_config(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
     params: Binary,
@@ -1445,7 +1459,7 @@ pub fn update_config(
 /// * **next_amp_time** is an object of type [`u64`]. This is the end time when the pool amplification will be equal to `next_amp`.
 fn start_changing_amp(
     mut config: Config,
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     next_amp: u64,
     next_amp_time: u64,
@@ -1490,7 +1504,11 @@ fn start_changing_amp(
 /// * **deps** is an object of type [`DepsMut`].
 ///
 /// * **env** is an object of type [`Env`].
-fn stop_changing_amp(mut config: Config, deps: DepsMut, env: Env) -> StdResult<()> {
+fn stop_changing_amp(
+    mut config: Config,
+    deps: DepsMut<PalomaQueryWrapper>,
+    env: Env,
+) -> StdResult<()> {
     let current_amp = compute_current_amp(&config, &env)?;
     let block_time = env.block.time.seconds();
 
@@ -1542,7 +1560,7 @@ fn compute_current_amp(config: &Config, env: &Env) -> StdResult<u64> {
 /// * **deps** is an object of type [`Deps`].
 ///
 /// * **env** is an object of type [`Env`].
-fn query_compute_d(deps: Deps, env: Env) -> StdResult<u128> {
+fn query_compute_d(deps: Deps<PalomaQueryWrapper>, env: Env) -> StdResult<u128> {
     let config = CONFIG.load(deps.storage)?;
 
     let amp = compute_current_amp(&config, &env)?;

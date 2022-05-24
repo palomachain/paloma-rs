@@ -117,7 +117,10 @@ pub fn query_supply(
 /// * **querier** is an object of type [`QuerierWrapper`].
 ///
 /// * **asset_info** is an object of type [`AssetInfo`] and contains the asset details for a specific token.
-pub fn query_token_precision(querier: &QuerierWrapper, asset_info: AssetInfo) -> StdResult<u8> {
+pub fn query_token_precision(
+    querier: &QuerierWrapper<PalomaQueryWrapper>,
+    asset_info: AssetInfo,
+) -> StdResult<u8> {
     Ok(match asset_info {
         AssetInfo::NativeToken { denom: _ } => NATIVE_TOKEN_PRECISION,
         AssetInfo::Token { contract_addr } => {

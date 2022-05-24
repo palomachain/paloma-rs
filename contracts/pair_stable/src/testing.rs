@@ -17,14 +17,14 @@ use astroport::pair::{
 use astroport::token::InstantiateMsg as TokenInstantiateMsg;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    attr, to_binary, Addr, BankMsg, BlockInfo, Coin, ContractResult, CosmosMsg, Decimal, DepsMut,
-    Env, Reply, ReplyOn, Response, StdError, SubMsg, SubMsgExecutionResponse, Timestamp, Uint128,
+    attr, to_binary, Addr, BankMsg, Binary, BlockInfo, Coin, CosmosMsg, Decimal, DepsMut, Env,
+    Reply, ReplyOn, Response, StdError, SubMsg, SubMsgResponse, SubMsgResult, Timestamp, Uint128,
     WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use protobuf::Message;
 
-fn store_liquidity_token(deps: DepsMut, msg_id: u64, contract_addr: String) {
+fn store_liquidity_token(deps: DepsMut<PalomaQueryWrapper>, msg_id: u64, contract_addr: String) {
     let data = MsgInstantiateContractResponse {
         contract_address: contract_addr,
         data: vec![],
@@ -36,9 +36,9 @@ fn store_liquidity_token(deps: DepsMut, msg_id: u64, contract_addr: String) {
 
     let reply_msg = Reply {
         id: msg_id,
-        result: ContractResult::Ok(SubMsgExecutionResponse {
+        result: SubMsgResult::Ok(SubMsgResponse {
             events: vec![],
-            data: Some(data.into()),
+            data: Some(Binary::from(data)),
         }),
     };
 
@@ -1259,6 +1259,7 @@ fn mock_env_with_block_time(time: u64) -> Env {
 }
 
 use astroport::factory::PairType;
+use paloma_cosmwasm::PalomaQueryWrapper;
 use proptest::prelude::*;
 use sim::StableSwapModel;
 

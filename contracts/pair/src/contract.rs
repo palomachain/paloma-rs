@@ -3,14 +3,15 @@ use crate::state::{Config, CONFIG};
 
 use cosmwasm_std::{
     attr, entry_point, from_binary, to_binary, Addr, Binary, CosmosMsg, Decimal, Decimal256, Deps,
-    DepsMut, Env, Fraction, Isqrt, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult,
-    SubMsg, Uint128, Uint256, WasmMsg,
+    DepsMut, Env, Isqrt, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg,
+    Uint128, Uint256, WasmMsg,
 };
 
 use crate::response::MsgInstantiateContractResponse;
 use astroport::asset::{addr_validate_to_lower, format_lp_token_name, Asset, AssetInfo, PairInfo};
 use astroport::factory::PairType;
 use astroport::generator::Cw20HookMsg as GeneratorHookMsg;
+use astroport::math::{to_decimal, to_decimal256};
 use astroport::pair::{migration_check, ConfigResponse, DEFAULT_SLIPPAGE, MAX_ALLOWED_SLIPPAGE};
 use astroport::pair::{
     CumulativePricesResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, PoolResponse,
@@ -1112,18 +1113,6 @@ fn compute_offer_amount(
         .unwrap_or_else(|_| Uint128::zero());
     let commission_amount = before_commission_deduction * commission_rate;
     Ok((offer_amount, spread_amount, commission_amount))
-}
-
-/// Convert a `Decimal256` into a `Decimal`
-fn to_decimal(d: Decimal256) -> Decimal {
-    let numerator: Uint128 = d.numerator().try_into().unwrap();
-    Decimal::from_atomics(numerator, d.decimal_places()).unwrap()
-}
-
-/// Convert a `Decimal` into a `Decimal256`.
-fn to_decimal256(d: Decimal) -> Decimal256 {
-    Decimal256::from_atomics(d.numerator(), d.decimal_places())
-        .expect("the range of Decimal256 strictly exceeds Decimal")
 }
 
 /// ## Description
