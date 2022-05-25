@@ -8,8 +8,12 @@ members = [
     "contracts/router",
     "contracts/token",
     "contracts/whitelist",
-#    "contracts/tokenomics/*",
-#    "contracts/periphery/*"
+#    "contracts/tokenomics/generator",
+#    "contracts/tokenomics/maker",
+#    "contracts/tokenomics/staking",
+#    "contracts/tokenomics/vesting",
+#    "contracts/tokenomics/xastro_token",
+    "contracts/oracle",
     "packages/*",
 ]
 

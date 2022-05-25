@@ -5,12 +5,12 @@ use astroport::asset::{addr_validate_to_lower, Asset, AssetInfo};
 use astroport::oracle::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use astroport::pair::TWAP_PRECISION;
 use astroport::querier::query_token_precision;
-use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_std::{
-    entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
-    Uint128,
+    entry_point, to_binary, Binary, Decimal256, Deps, DepsMut, Env, Fraction, MessageInfo,
+    Response, StdError, StdResult, Uint128, Uint256,
 };
 use cw2::set_contract_version;
+use paloma_cosmwasm::PalomaQueryWrapper;
 
 /// Contract name that is used for migration.
 const CONTRACT_NAME: &str = "astroport-oracle";
@@ -157,7 +157,7 @@ pub fn update(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
 /// * **QueryMsg::Consult { token, amount }** Validates assets and calculates a new average
 /// amount with updated precision
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps<PalomaQueryWrapper>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Consult { token, amount } => to_binary(&consult(deps, token, amount)?),
     }
@@ -172,7 +172,11 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 /// * **token** is an object of type [`AssetInfo`]. This is the token for which we multiply its TWAP value by an amount.
 ///
 /// * **amount** is an object of type [`Uint128`]. This is the amount of tokens we multiply the TWAP by.
-fn consult(deps: Deps, token: AssetInfo, amount: Uint128) -> Result<Uint256, StdError> {
+fn consult(
+    deps: Deps<PalomaQueryWrapper>,
+    token: AssetInfo,
+    amount: Uint128,
+) -> Result<Uint256, StdError> {
     let config = CONFIG.load(deps.storage)?;
     let price_last = PRICE_LAST.load(deps.storage)?;
 
@@ -203,7 +207,10 @@ fn consult(deps: Deps, token: AssetInfo, amount: Uint128) -> Result<Uint256, Std
         Uint256::from(price).multiply_ratio(Uint256::from(amount), Uint256::from(one))
     } else {
         let price_precision = Uint256::from(10_u128.pow(TWAP_PRECISION.into()));
-        Uint256::from(amount) * price_average / Decimal256::from_uint256(price_precision)
+        Uint256::from(amount).multiply_ratio(
+            price_average.numerator(),
+            price_average.denominator() * price_precision,
+        )
     })
 }
 

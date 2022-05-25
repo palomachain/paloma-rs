@@ -2,6 +2,7 @@ use astroport::asset::{Asset, AssetInfo, PairInfo};
 use astroport::factory::QueryMsg as FactoryQueryMsg;
 use astroport::pair::{CumulativePricesResponse, QueryMsg as PairQueryMsg, SimulationResponse};
 use cosmwasm_std::{to_binary, Addr, QuerierWrapper, QueryRequest, StdResult, WasmQuery};
+use paloma_cosmwasm::PalomaQueryWrapper;
 
 /// ## Description
 /// Returns information about the target pair using a [`PairInfo`] object.
@@ -47,7 +48,7 @@ pub fn query_cumulative_prices(
 ///
 /// * **asset** is an object of type [`Asset`]. This is the asset for which we return the simulated price.
 pub fn query_prices(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<PalomaQueryWrapper>,
     pair_contract: Addr,
     asset: Asset,
 ) -> StdResult<SimulationResponse> {
