@@ -10,7 +10,7 @@ members = [
     "contracts/token",
     "contracts/tokenomics/maker",
     "contracts/tokenomics/staking",
-#    "contracts/tokenomics/vesting",
+    "contracts/tokenomics/vesting",
 #    "contracts/tokenomics/xastro_token",
     "contracts/whitelist",
     "packages/*",

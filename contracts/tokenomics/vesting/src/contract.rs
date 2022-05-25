@@ -14,6 +14,7 @@ use astroport::vesting::{
 };
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
+use paloma_cosmwasm::PalomaQueryWrapper;
 
 /// Contract name that is used for migration.
 const CONTRACT_NAME: &str = "astroport-vesting";
@@ -71,7 +72,7 @@ pub fn instantiate(
 /// depending on the received template.
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -126,7 +127,7 @@ pub fn execute(
 ///
 /// * **cw20_msg** is an object of type [`Cw20ReceiveMsg`]. This is the CW20 message to process.
 fn receive_cw20(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
@@ -166,7 +167,7 @@ fn receive_cw20(
 /// * **cw20_amount** is an object of type [`Uint128`]. Sets the amount that confirms the total
 /// amount of all accounts to register
 pub fn register_vesting_accounts(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     _env: Env,
     vesting_accounts: Vec<VestingAccount>,
     cw20_amount: Uint128,
@@ -251,7 +252,7 @@ fn assert_vesting_schedules(
 ///
 /// * **amount** is an [`Option`] field of type [`Uint128`]. This is the amount of vested tokens to claim.
 pub fn claim(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
     recipient: Option<String>,
