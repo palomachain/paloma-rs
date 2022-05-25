@@ -25,6 +25,7 @@ use cosmwasm_std::{
 };
 use cw2::{get_contract_version, set_contract_version};
 use cw20::Cw20ExecuteMsg;
+use paloma_cosmwasm::PalomaQueryWrapper;
 use std::collections::{HashMap, HashSet};
 
 /// Contract name that is used for migration.
@@ -47,7 +48,7 @@ const DEFAULT_MAX_SPREAD: u64 = 5; // 5%
 /// * **msg** is a message of type [`InstantiateMsg`] which contains the parameters used for creating the contract.
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     _env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
@@ -136,7 +137,7 @@ pub fn instantiate(
 /// * **ExecuteMsg::EnableRewards** Enables collected ASTRO (pre Maker upgrade) to be distributed to xASTRO stakers.
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -233,7 +234,7 @@ pub fn execute(
 ///
 /// * **assets** is a vector that contains objects of type [`AssetWithLimit`]. These are the fee tokens being swapped to ASTRO.
 fn collect(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     assets: Vec<AssetWithLimit>,
 ) -> Result<Response, ContractError> {
@@ -299,7 +300,7 @@ enum SwapTarget {
 ///
 /// * **with_validation** is a parameter of type [`u64`]. Determines whether the swap operation is validated or not.
 fn swap_assets(
-    deps: Deps,
+    deps: Deps<PalomaQueryWrapper>,
     env: Env,
     cfg: &Config,
     assets: Vec<AssetWithLimit>,
@@ -363,7 +364,7 @@ fn swap_assets(
 ///
 /// * **amount_in** is an object of type [`Uint128`]. This is the amount of fee tokens to swap.
 fn swap(
-    deps: Deps,
+    deps: Deps<PalomaQueryWrapper>,
     cfg: &Config,
     from_token: AssetInfo,
     amount_in: Uint128,
@@ -434,7 +435,7 @@ fn swap(
 ///
 /// * **amount_in** is an object of type [`Uint128`]. This is the amount of tokens to swap.
 fn swap_no_validate(
-    deps: Deps,
+    deps: Deps<PalomaQueryWrapper>,
     cfg: &Config,
     from_token: AssetInfo,
     amount_in: Uint128,
@@ -487,7 +488,7 @@ fn swap_no_validate(
 /// ##Executor
 /// Only the Maker contract itself can execute this.
 fn swap_bridge_assets(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
     assets: Vec<AssetInfo>,
@@ -541,7 +542,11 @@ fn swap_bridge_assets(
 ///
 /// ##Executor
 /// Only the Maker contract itself can execute this.
-fn distribute_astro(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+fn distribute_astro(
+    deps: DepsMut<PalomaQueryWrapper>,
+    env: Env,
+    info: MessageInfo,
+) -> Result<Response, ContractError> {
     if info.sender != env.contract.address {
         return Err(ContractError::Unauthorized {});
     }
@@ -569,7 +574,7 @@ type DistributeMsgParts = (Vec<SubMsg>, Vec<(String, String)>);
 ///
 /// * **cfg** is an object of type [`Config`].
 fn distribute(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     cfg: &mut Config,
 ) -> Result<DistributeMsgParts, ContractError> {
@@ -685,7 +690,7 @@ fn distribute(
 /// ##Executor
 /// Only the owner can execute this.
 fn update_config(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     info: MessageInfo,
     factory_contract: Option<String>,
     staking_contract: Option<String>,
@@ -762,7 +767,7 @@ fn update_config(
 /// ##Executor
 /// Only the owner can execute this.
 fn update_bridges(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     info: MessageInfo,
     add: Option<Vec<(AssetInfo, AssetInfo)>>,
     remove: Option<Vec<AssetInfo>>,
@@ -827,7 +832,7 @@ fn update_bridges(
 /// * **QueryMsg::Bridges {}** Returns the bridges used for swapping fee tokens
 /// using a vector of [`(String, String)`] denoting Asset -> Bridge connections.
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps<PalomaQueryWrapper>, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_get_config(deps)?),
         QueryMsg::Balances { assets } => to_binary(&query_get_balances(deps, env, assets)?),
@@ -839,7 +844,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 /// Returns information about the Maker configuration using a [`ConfigResponse`] object.
 /// ## Params
 /// * **deps** is an object of type [`Deps`].
-fn query_get_config(deps: Deps) -> StdResult<ConfigResponse> {
+fn query_get_config(deps: Deps<PalomaQueryWrapper>) -> StdResult<ConfigResponse> {
     let config = CONFIG.load(deps.storage)?;
     Ok(ConfigResponse {
         owner: config.owner,
@@ -862,7 +867,11 @@ fn query_get_config(deps: Deps) -> StdResult<ConfigResponse> {
 /// * **env** is an object of type [`Env`].
 ///
 /// * **assets** is a vector that contains objects of type [`AssetInfo`]. These are the assets for which we query the Maker's balances.
-fn query_get_balances(deps: Deps, env: Env, assets: Vec<AssetInfo>) -> StdResult<BalancesResponse> {
+fn query_get_balances(
+    deps: Deps<PalomaQueryWrapper>,
+    env: Env,
+    assets: Vec<AssetInfo>,
+) -> StdResult<BalancesResponse> {
     let mut resp = BalancesResponse { balances: vec![] };
 
     for a in assets {
@@ -885,11 +894,11 @@ fn query_get_balances(deps: Deps, env: Env, assets: Vec<AssetInfo>) -> StdResult
 /// * **deps** is an object of type [`Deps`].
 ///
 /// * **env** is an object of type [`Env`].
-fn query_bridges(deps: Deps, _env: Env) -> StdResult<Vec<(String, String)>> {
+fn query_bridges(deps: Deps<PalomaQueryWrapper>, _env: Env) -> StdResult<Vec<(String, String)>> {
     BRIDGES
         .range(deps.storage, None, None, Order::Ascending)
-        .map(|bridge| bridge.map(|bridge| Ok((String::from_utf8(bridge.0)?, bridge.1.to_string()))))
-        .collect::<StdResult<StdResult<Vec<_>>>>()?
+        .map(|bridge| bridge.map(|(bridge_name, asset_info)| (bridge_name, asset_info.to_string())))
+        .collect()
 }
 
 /// ## Description

@@ -8,6 +8,7 @@ use astroport::asset::AssetInfo;
 
 use astroport::common::OwnershipProposal;
 use astroport::factory::PairConfig;
+use paloma_cosmwasm::PalomaQueryWrapper;
 
 /// ## Description
 /// This structure holds the main contract parameters.
@@ -69,7 +70,7 @@ const DEFAULT_LIMIT: u32 = 10;
 ///
 /// `limit` is the number of items to retreive. It is an [`Option`].
 pub fn read_pairs(
-    deps: Deps,
+    deps: Deps<PalomaQueryWrapper>,
     start_after: Option<[AssetInfo; 2]>,
     limit: Option<u32>,
 ) -> Vec<Addr> {

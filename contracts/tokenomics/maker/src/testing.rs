@@ -1,14 +1,27 @@
-use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-use cosmwasm_std::{from_binary, Addr, Decimal, Uint128, Uint64};
+use cosmwasm_std::testing::{
+    mock_env, mock_info, MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR,
+};
+use cosmwasm_std::{from_binary, Addr, Decimal, OwnedDeps, Uint128, Uint64};
 
 use crate::contract::{execute, instantiate, query};
 use crate::state::{Config, CONFIG};
 use astroport::maker::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
+use paloma_cosmwasm::PalomaQueryWrapper;
 use std::str::FromStr;
+
+/// mock_dependencies is a drop-in replacement for cosmwasm_std::testing::mock_dependencies.
+fn mock_dependencies() -> OwnedDeps<MockStorage, MockApi, MockQuerier, PalomaQueryWrapper> {
+    OwnedDeps {
+        storage: Default::default(),
+        api: Default::default(),
+        querier: MockQuerier::new(&[(MOCK_CONTRACT_ADDR, &[])]),
+        custom_query_type: Default::default(),
+    }
+}
 
 #[test]
 fn proper_initialization() {
-    let mut deps = mock_dependencies(&[]);
+    let mut deps = mock_dependencies();
     let info = mock_info("addr0000", &[]);
 
     let env = mock_env();
@@ -53,7 +66,7 @@ fn proper_initialization() {
 
 #[test]
 fn update_owner() {
-    let mut deps = mock_dependencies(&[]);
+    let mut deps = mock_dependencies();
     let info = mock_info("addr0000", &[]);
 
     let owner = Addr::unchecked("owner");
