@@ -25,4 +25,3 @@ thiserror = "1.0.31"
 
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0", default-features = false }
-astroport-token = {path = "../../token"}

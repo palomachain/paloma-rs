@@ -34,7 +34,5 @@ serde = { version = "1.0.137", default-features = false, features = ["derive"] }
 thiserror = "1.0.31"
 
 [dev-dependencies]
-astroport-pair = {path = "../pair"}
-astroport-token = {path = "../token"}
 cosmwasm-schema = "1.0.0"
 cw20 = "0.13.2"
