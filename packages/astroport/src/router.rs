@@ -1,8 +1,7 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
 use cosmwasm_std::{Addr, Decimal, Uint128};
 use cw20::Cw20ReceiveMsg;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 use crate::asset::AssetInfo;
 

@@ -1,9 +1,10 @@
-use crate::state::PAIR_CONFIGS;
 use astroport::factory::{PairConfig, PairType};
 use cosmwasm_std::{Addr, StdError, Storage};
 use cw_storage_plus::{Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use crate::state::PAIR_CONFIGS;
 
 /// This structure describes a contract migration message.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

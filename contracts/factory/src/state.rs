@@ -1,14 +1,11 @@
-use cw_storage_plus::{Bound, Item, Map};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
-use cosmwasm_std::{Addr, Deps, Order};
-
 use astroport::asset::AssetInfo;
-
 use astroport::common::OwnershipProposal;
 use astroport::factory::PairConfig;
+use cosmwasm_std::{Addr, Deps, Order};
+use cw_storage_plus::{Bound, Item, Map};
 use paloma_cosmwasm::PalomaQueryWrapper;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// ## Description
 /// This structure holds the main contract parameters.

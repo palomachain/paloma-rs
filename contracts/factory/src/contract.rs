@@ -1,33 +1,30 @@
-use cosmwasm_std::{
-    attr, entry_point, from_binary, to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env,
-    MessageInfo, Order, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, WasmMsg,
-};
-
-use crate::error::ContractError;
-use crate::migration;
-use crate::querier::query_pair_info;
-
-use crate::state::{
-    pair_key, read_pairs, Config, TmpPairInfo, CONFIG, OWNERSHIP_PROPOSAL, PAIRS, PAIRS_TO_MIGRATE,
-    PAIR_CONFIGS, TMP_PAIR_INFO,
-};
-
-use crate::response::MsgInstantiateContractResponse;
+use std::collections::HashSet;
 
 use astroport::asset::{addr_validate_to_lower, AssetInfo, PairInfo};
+use astroport::common::{claim_ownership, drop_ownership_proposal, propose_new_owner};
 use astroport::factory::{
     ConfigResponse, ExecuteMsg, FeeInfoResponse, InstantiateMsg, MigrateMsg, PairConfig, PairType,
     PairsResponse, QueryMsg,
 };
-
-use crate::migration::migrate_pair_configs_to_v120;
-use astroport::common::{claim_ownership, drop_ownership_proposal, propose_new_owner};
 use astroport::generator::ExecuteMsg::DeactivatePool;
 use astroport::pair::InstantiateMsg as PairInstantiateMsg;
+use cosmwasm_std::{
+    attr, entry_point, from_binary, to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env,
+    MessageInfo, Order, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, WasmMsg,
+};
 use cw2::{get_contract_version, set_contract_version};
 use paloma_cosmwasm::PalomaQueryWrapper;
 use protobuf::Message;
-use std::collections::HashSet;
+
+use crate::error::ContractError;
+use crate::migration;
+use crate::migration::migrate_pair_configs_to_v120;
+use crate::querier::query_pair_info;
+use crate::response::MsgInstantiateContractResponse;
+use crate::state::{
+    pair_key, read_pairs, Config, TmpPairInfo, CONFIG, OWNERSHIP_PROPOSAL, PAIRS, PAIRS_TO_MIGRATE,
+    PAIR_CONFIGS, TMP_PAIR_INFO,
+};
 
 /// Contract name that is used for migration.
 const CONTRACT_NAME: &str = "astroport-factory";

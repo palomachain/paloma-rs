@@ -1,8 +1,7 @@
+use cosmwasm_std::Addr;
 use cw_storage_plus::Item;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use cosmwasm_std::Addr;
 
 /// ## Description
 /// Stores the contract config at the given key

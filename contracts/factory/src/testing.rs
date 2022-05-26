@@ -1,25 +1,20 @@
-use cosmwasm_std::{
-    attr, from_binary, to_binary, Addr, Binary, Reply, ReplyOn, SubMsg, SubMsgResponse,
-    SubMsgResult, WasmMsg,
-};
-
-use crate::mock_querier::mock_dependencies;
-use crate::state::CONFIG;
-use crate::{
-    contract::{execute, instantiate, query},
-    error::ContractError,
-};
-
 use astroport::asset::{AssetInfo, PairInfo};
 use astroport::factory::{
     ConfigResponse, ExecuteMsg, InstantiateMsg, PairConfig, PairType, PairsResponse, QueryMsg,
 };
-
-use crate::contract::reply;
-use crate::response::MsgInstantiateContractResponse;
 use astroport::pair::InstantiateMsg as PairInstantiateMsg;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
+use cosmwasm_std::{
+    attr, from_binary, to_binary, Addr, Binary, Reply, ReplyOn, SubMsg, SubMsgResponse,
+    SubMsgResult, WasmMsg,
+};
 use protobuf::Message;
+
+use crate::contract::{execute, instantiate, query, reply};
+use crate::error::ContractError;
+use crate::mock_querier::mock_dependencies;
+use crate::response::MsgInstantiateContractResponse;
+use crate::state::CONFIG;
 
 #[test]
 fn pair_type_to_string() {

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use astroport::asset::PairInfo;
 use astroport::pair::QueryMsg;
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
@@ -6,7 +8,6 @@ use cosmwasm_std::{
     QueryRequest, SystemError, SystemResult, WasmQuery,
 };
 use paloma_cosmwasm::PalomaQueryWrapper;
-use std::collections::HashMap;
 
 /// mock_dependencies is a drop-in replacement for cosmwasm_std::testing::mock_dependencies.
 /// This uses the Astroport CustomQuerier.

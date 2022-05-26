@@ -1,14 +1,14 @@
+use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
+use cosmwasm_std::{to_binary, Addr, BankMsg, Coin, CosmosMsg, Decimal, Uint128, WasmMsg};
+use cw20::Cw20ExecuteMsg;
+
 use crate::asset::{format_lp_token_name, Asset, AssetInfo, PairInfo};
+use crate::factory::PairType;
 use crate::mock_querier::mock_dependencies;
 use crate::querier::{
     query_all_balances, query_balance, query_pair_info, query_supply, query_token_balance,
 };
-
-use crate::factory::PairType;
 use crate::DecimalCheckedOps;
-use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
-use cosmwasm_std::{to_binary, Addr, BankMsg, Coin, CosmosMsg, Decimal, Uint128, WasmMsg};
-use cw20::Cw20ExecuteMsg;
 
 #[test]
 fn token_balance_querier() {

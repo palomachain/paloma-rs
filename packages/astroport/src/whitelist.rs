@@ -1,8 +1,8 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use std::fmt;
 
 use cosmwasm_std::{CosmosMsg, Empty};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 pub struct InstantiateMsg {

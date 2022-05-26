@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use astroport::asset::{Asset, PairInfo};
 use astroport::factory::PairType;
 use astroport::factory::QueryMsg::Pair;
@@ -9,7 +11,6 @@ use cosmwasm_std::{
     QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
 };
 use paloma_cosmwasm::PalomaQueryWrapper;
-use std::collections::HashMap;
 
 pub fn mock_dependencies(
     contract_balance: &[Coin],

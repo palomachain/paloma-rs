@@ -1,10 +1,9 @@
+use cosmwasm_std::{Addr, Binary, Decimal, Uint128};
+use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::asset::Asset;
-
-use cosmwasm_std::{Addr, Binary, Decimal, Uint128};
-use cw20::Cw20ReceiveMsg;
 
 /// This structure describes the execute messages available in the contract.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

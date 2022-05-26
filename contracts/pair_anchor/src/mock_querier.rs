@@ -1,19 +1,18 @@
-use crate::market::{EpochStateResponse, QueryMsg as AnchorQueryMsg};
+use std::collections::HashMap;
+use std::str::FromStr;
+
+use astroport::factory::{FeeInfoResponse, QueryMsg};
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     from_binary, from_slice, to_binary, Addr, Coin, Decimal, Decimal256, OwnedDeps, Querier,
     QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, Uint256, WasmQuery,
 };
-use std::collections::HashMap;
-
-use astroport::factory::FeeInfoResponse;
-use astroport::factory::QueryMsg;
-
 use cw20::{BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 use paloma_cosmwasm::{
     PalomaQuery, PalomaQueryWrapper, PalomaRoute, TaxCapResponse, TaxRateResponse,
 };
-use std::str::FromStr;
+
+use crate::market::{EpochStateResponse, QueryMsg as AnchorQueryMsg};
 
 /// mock_dependencies is a drop-in replacement for cosmwasm_std::testing::mock_dependencies.
 /// This uses the Astroport CustomQuerier.

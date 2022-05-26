@@ -1,6 +1,3 @@
-use crate::error::ContractError;
-use crate::querier::{query_cumulative_prices, query_pair_info, query_prices};
-use crate::state::{Config, PriceCumulativeLast, CONFIG, PRICE_LAST};
 use astroport::asset::{addr_validate_to_lower, Asset, AssetInfo};
 use astroport::oracle::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use astroport::pair::TWAP_PRECISION;
@@ -11,6 +8,10 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use paloma_cosmwasm::PalomaQueryWrapper;
+
+use crate::error::ContractError;
+use crate::querier::{query_cumulative_prices, query_pair_info, query_prices};
+use crate::state::{Config, PriceCumulativeLast, CONFIG, PRICE_LAST};
 
 /// Contract name that is used for migration.
 const CONTRACT_NAME: &str = "astroport-oracle";

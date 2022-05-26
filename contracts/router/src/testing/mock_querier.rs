@@ -1,19 +1,19 @@
-use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
-use cosmwasm_std::{
-    from_binary, from_slice, to_binary, Addr, Binary, Coin, ContractResult, Decimal, OwnedDeps,
-    Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
-};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use astroport::asset::{Asset, AssetInfo, PairInfo};
 use astroport::factory::PairType;
 use astroport::pair::SimulationResponse;
+use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
+use cosmwasm_std::{
+    from_binary, from_slice, to_binary, Addr, Binary, Coin, ContractResult, Decimal, OwnedDeps,
+    Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
+};
 use cw20::{BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 use paloma_cosmwasm::{
     PalomaQuery, PalomaQueryWrapper, PalomaRoute, SwapResponse, TaxCapResponse, TaxRateResponse,
 };
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

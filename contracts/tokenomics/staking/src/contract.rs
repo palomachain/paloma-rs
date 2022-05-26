@@ -1,21 +1,20 @@
+use astroport::asset::addr_validate_to_lower;
+use astroport::staking::{ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg};
+use astroport::token::InstantiateMsg as TokenInstantiateMsg;
 use cosmwasm_std::{
     entry_point, from_binary, to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
     Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
-
-use crate::error::ContractError;
-use crate::state::{Config, CONFIG};
-use astroport::staking::{ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg};
 use cw2::set_contract_version;
 use cw20::{
     BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg, Cw20ReceiveMsg, MinterResponse,
     TokenInfoResponse,
 };
-
-use crate::response::MsgInstantiateContractResponse;
-use astroport::asset::addr_validate_to_lower;
-use astroport::token::InstantiateMsg as TokenInstantiateMsg;
 use protobuf::Message;
+
+use crate::error::ContractError;
+use crate::response::MsgInstantiateContractResponse;
+use crate::state::{Config, CONFIG};
 
 /// Contract name that is used for migration.
 const CONTRACT_NAME: &str = "astroport-staking";

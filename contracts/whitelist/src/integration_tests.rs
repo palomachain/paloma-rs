@@ -8,7 +8,8 @@ use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor,
 };
 use derivative::Derivative;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 
 fn mock_app() -> App {
     AppBuilder::new()

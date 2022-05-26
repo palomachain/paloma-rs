@@ -1,17 +1,16 @@
+use cosmwasm_std::{
+    to_binary, Addr, AllBalanceResponse, BalanceResponse, BankQuery, Coin, Decimal, QuerierWrapper,
+    QueryRequest, StdResult, Uint128, WasmQuery,
+};
+use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
+use paloma_cosmwasm::PalomaQueryWrapper;
+
 use crate::asset::{Asset, AssetInfo, PairInfo};
 use crate::factory::{
     ConfigResponse as FactoryConfigResponse, FeeInfoResponse, PairType, PairsResponse,
     QueryMsg as FactoryQueryMsg,
 };
 use crate::pair::{QueryMsg as PairQueryMsg, ReverseSimulationResponse, SimulationResponse};
-
-use cosmwasm_std::{
-    to_binary, Addr, AllBalanceResponse, BalanceResponse, BankQuery, Coin, Decimal, QuerierWrapper,
-    QueryRequest, StdResult, Uint128, WasmQuery,
-};
-
-use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
-use paloma_cosmwasm::PalomaQueryWrapper;
 
 // It's defined at https://github.com/terra-money/core/blob/d8e277626e74f9d6417dcd598574686882f0274c/types/assets/assets.go#L15
 const NATIVE_TOKEN_PRECISION: u8 = 6;

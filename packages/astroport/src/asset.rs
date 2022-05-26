@@ -1,16 +1,17 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use crate::factory::PairType;
-use crate::pair::QueryMsg as PairQueryMsg;
-use crate::querier::{query_balance, query_token_balance, query_token_symbol};
 use cosmwasm_std::{
     to_binary, Addr, Api, BankMsg, Coin, CosmosMsg, Decimal, Deps, MessageInfo, QuerierWrapper,
     StdError, StdResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, MinterResponse};
 use paloma_cosmwasm::{PalomaQuerier, PalomaQueryWrapper};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+
+use crate::factory::PairType;
+use crate::pair::QueryMsg as PairQueryMsg;
+use crate::querier::{query_balance, query_token_balance, query_token_symbol};
 
 /// UST token denomination
 pub const UUSD_DENOM: &str = "uusd";

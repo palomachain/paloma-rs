@@ -1,10 +1,3 @@
-use crate::contract::{
-    assert_max_spread, execute, instantiate, query_pair_info, query_pool, query_reverse_simulation,
-    query_share, query_simulation,
-};
-use crate::error::ContractError;
-use crate::market::{Cw20HookMsg as AnchorCw20HookMsg, ExecuteMsg as AnchorExecuteMsg};
-use crate::mock_querier::mock_dependencies;
 use astroport::asset::{Asset, AssetInfo, PairInfo};
 use astroport::pair::InstantiateMsg;
 use astroport::pair_anchor::{
@@ -16,6 +9,14 @@ use cosmwasm_std::{
     ReplyOn, SubMsg, Timestamp, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
+
+use crate::contract::{
+    assert_max_spread, execute, instantiate, query_pair_info, query_pool, query_reverse_simulation,
+    query_share, query_simulation,
+};
+use crate::error::ContractError;
+use crate::market::{Cw20HookMsg as AnchorCw20HookMsg, ExecuteMsg as AnchorExecuteMsg};
+use crate::mock_querier::mock_dependencies;
 
 const MOCK_ANCHOR_ADDR: &str = "anchor";
 const MOCK_ANCHOR_TOKEN: &str = "addr1aust";

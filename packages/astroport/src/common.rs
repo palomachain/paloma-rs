@@ -1,9 +1,10 @@
-use crate::asset::addr_validate_to_lower;
 use cosmwasm_std::{attr, Addr, DepsMut, Env, MessageInfo, Response, StdError, StdResult};
 use cw_storage_plus::Item;
 use paloma_cosmwasm::PalomaQueryWrapper;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use crate::asset::addr_validate_to_lower;
 
 const MAX_PROPOSAL_TTL: u64 = 1209600;
 

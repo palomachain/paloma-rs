@@ -1,8 +1,9 @@
-use crate::asset::{Asset, AssetInfo};
-use crate::factory::UpdateAddr;
 use cosmwasm_std::{Addr, Decimal, Uint128, Uint64};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use crate::asset::{Asset, AssetInfo};
+use crate::factory::UpdateAddr;
 
 /// This structure stores general parameters for the contract.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

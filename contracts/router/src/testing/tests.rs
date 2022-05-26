@@ -1,21 +1,19 @@
-use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
-use cosmwasm_std::{
-    from_binary, to_binary, Addr, Coin, Decimal, ReplyOn, SubMsg, Uint128, WasmMsg,
-};
-
-use crate::contract::{execute, instantiate, query};
-use crate::error::ContractError;
-use crate::testing::mock_querier::mock_dependencies;
-
-use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
-
 use astroport::asset::{Asset, AssetInfo};
 use astroport::pair::ExecuteMsg as PairExecuteMsg;
 use astroport::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation, MAX_SWAP_OPERATIONS,
 };
+use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
+use cosmwasm_std::{
+    from_binary, to_binary, Addr, Coin, Decimal, ReplyOn, SubMsg, Uint128, WasmMsg,
+};
+use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use paloma_cosmwasm::{create_swap_msg, create_swap_send_msg};
+
+use crate::contract::{execute, instantiate, query};
+use crate::error::ContractError;
+use crate::testing::mock_querier::mock_dependencies;
 
 #[test]
 fn proper_initialization() {

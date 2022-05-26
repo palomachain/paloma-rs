@@ -1,42 +1,38 @@
-use crate::error::ContractError;
-use crate::math::{
-    calc_ask_amount, calc_offer_amount, compute_d, AMP_PRECISION, MAX_AMP, MAX_AMP_CHANGE,
-    MIN_AMP_CHANGING_TIME, N_COINS,
-};
-use crate::state::{Config, CONFIG};
+use std::cmp::Ordering;
+use std::str::FromStr;
+use std::vec;
 
-use cosmwasm_std::{
-    attr, entry_point, from_binary, to_binary, Addr, Binary, CosmosMsg, Decimal, Decimal256, Deps,
-    DepsMut, Env, Isqrt, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg,
-    Uint128, Uint256, Uint64, WasmMsg,
-};
-
-use crate::response::MsgInstantiateContractResponse;
 use astroport::asset::{addr_validate_to_lower, format_lp_token_name, Asset, AssetInfo, PairInfo};
 use astroport::factory::PairType;
-
 use astroport::generator::Cw20HookMsg as GeneratorHookMsg;
-use astroport::pair::{
-    migration_check, ConfigResponse, InstantiateMsg, StablePoolParams, StablePoolUpdateParams,
-    DEFAULT_SLIPPAGE, MAX_ALLOWED_SLIPPAGE, TWAP_PRECISION,
-};
-
 use astroport::math::{to_decimal, to_decimal256};
 use astroport::pair::{
-    CumulativePricesResponse, Cw20HookMsg, ExecuteMsg, MigrateMsg, PoolResponse, QueryMsg,
-    ReverseSimulationResponse, SimulationResponse, StablePoolConfig,
+    migration_check, ConfigResponse, CumulativePricesResponse, Cw20HookMsg, ExecuteMsg,
+    InstantiateMsg, MigrateMsg, PoolResponse, QueryMsg, ReverseSimulationResponse,
+    SimulationResponse, StablePoolConfig, StablePoolParams, StablePoolUpdateParams,
+    DEFAULT_SLIPPAGE, MAX_ALLOWED_SLIPPAGE, TWAP_PRECISION,
 };
 use astroport::querier::{
     query_factory_config, query_fee_info, query_supply, query_token_precision,
 };
 use astroport::token;
+use cosmwasm_std::{
+    attr, entry_point, from_binary, to_binary, Addr, Binary, CosmosMsg, Decimal, Decimal256, Deps,
+    DepsMut, Env, Isqrt, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg,
+    Uint128, Uint256, Uint64, WasmMsg,
+};
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use paloma_cosmwasm::PalomaQueryWrapper;
 use protobuf::Message;
-use std::cmp::Ordering;
-use std::str::FromStr;
-use std::vec;
+
+use crate::error::ContractError;
+use crate::math::{
+    calc_ask_amount, calc_offer_amount, compute_d, AMP_PRECISION, MAX_AMP, MAX_AMP_CHANGE,
+    MIN_AMP_CHANGING_TIME, N_COINS,
+};
+use crate::response::MsgInstantiateContractResponse;
+use crate::state::{Config, CONFIG};
 
 /// Contract name that is used for migration.
 const CONTRACT_NAME: &str = "astroport-pair-stable";

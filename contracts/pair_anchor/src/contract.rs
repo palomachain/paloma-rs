@@ -1,33 +1,30 @@
+use std::str::FromStr;
+use std::vec;
+
+use astroport::asset::{addr_validate_to_lower, Asset, AssetInfo, PairInfo};
+use astroport::factory::PairType;
+use astroport::math::{to_decimal, to_decimal256};
+use astroport::pair::{migration_check, InstantiateMsg};
+use astroport::pair_anchor::{
+    ConfigResponse, CumulativePricesResponse, Cw20HookMsg, ExecuteMsg, MigrateMsg, PoolResponse,
+    QueryMsg, ReverseSimulationResponse, SimulationResponse, DEFAULT_SLIPPAGE,
+    MAX_ALLOWED_SLIPPAGE,
+};
+use astroport::querier::query_fee_info;
+use cosmwasm_std::{
+    entry_point, from_binary, to_binary, Addr, Binary, Coin, CosmosMsg, Decimal, Decimal256, Deps,
+    DepsMut, Env, Fraction, MessageInfo, Response, StdError, StdResult, Uint128, Uint256, WasmMsg,
+};
+use cw2::set_contract_version;
+use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
+use paloma_cosmwasm::PalomaQueryWrapper;
+
 use crate::error::ContractError;
 use crate::market::{
     Cw20HookMsg as AnchorCw20HookMsg, EpochStateResponse, ExecuteMsg as AnchorExecuteMsg,
     QueryMsg as AnchorQueryMsg,
 };
 use crate::state::{Config, CONFIG};
-
-use astroport::querier::query_fee_info;
-
-use cosmwasm_std::{
-    entry_point, from_binary, to_binary, Addr, Binary, Coin, CosmosMsg, Decimal, Decimal256, Deps,
-    DepsMut, Env, Fraction, MessageInfo, Response, StdError, StdResult, Uint128, Uint256, WasmMsg,
-};
-
-use astroport::asset::{addr_validate_to_lower, Asset, AssetInfo, PairInfo};
-use astroport::factory::PairType;
-
-use astroport::pair::{migration_check, InstantiateMsg};
-use astroport::pair_anchor::{ConfigResponse, DEFAULT_SLIPPAGE, MAX_ALLOWED_SLIPPAGE};
-use astroport::pair_anchor::{
-    CumulativePricesResponse, Cw20HookMsg, ExecuteMsg, MigrateMsg, PoolResponse, QueryMsg,
-    ReverseSimulationResponse, SimulationResponse,
-};
-
-use astroport::math::{to_decimal, to_decimal256};
-use cw2::set_contract_version;
-use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
-use paloma_cosmwasm::PalomaQueryWrapper;
-use std::str::FromStr;
-use std::vec;
 
 /// Contract name that is used for migration.
 const CONTRACT_NAME: &str = "astroport-pair-anchor";

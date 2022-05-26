@@ -1,8 +1,10 @@
-use crate::asset::{AssetInfo, PairInfo};
+use std::fmt::{Display, Formatter, Result};
+
 use cosmwasm_std::{Addr, Binary};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter, Result};
+
+use crate::asset::{AssetInfo, PairInfo};
 
 const MAX_TOTAL_FEE_BPS: u16 = 10_000;
 const MAX_MAKER_FEE_BPS: u16 = 10_000;

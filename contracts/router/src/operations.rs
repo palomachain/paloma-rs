@@ -1,18 +1,17 @@
-use cosmwasm_std::{
-    to_binary, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, StdResult, WasmMsg,
-};
-
-use crate::error::ContractError;
-use crate::state::{Config, CONFIG};
-
 use astroport::asset::{Asset, AssetInfo, PairInfo};
 use astroport::pair::ExecuteMsg as PairExecuteMsg;
 use astroport::querier::{query_balance, query_pair_info, query_token_balance};
 use astroport::router::SwapOperation;
+use cosmwasm_std::{
+    to_binary, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, StdResult, WasmMsg,
+};
 use cw20::Cw20ExecuteMsg;
 use paloma_cosmwasm::{
     create_swap_msg, create_swap_send_msg, PalomaMsgWrapper, PalomaQueryWrapper,
 };
+
+use crate::error::ContractError;
+use crate::state::{Config, CONFIG};
 
 /// ## Description
 /// Execute a swap operation. Returns a [`ContractError`] on failure, otherwise returns a [`Response`] with the

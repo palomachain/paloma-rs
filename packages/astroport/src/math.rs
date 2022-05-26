@@ -1,5 +1,6 @@
-use cosmwasm_std::{Decimal, Decimal256, Fraction, Uint128};
 use std::convert::TryInto;
+
+use cosmwasm_std::{Decimal, Decimal256, Fraction, Uint128};
 
 /// Convert a `Decimal256` into a `Decimal`
 #[inline]

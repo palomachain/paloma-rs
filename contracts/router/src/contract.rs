@@ -1,12 +1,4 @@
-use cosmwasm_std::{
-    entry_point, from_binary, to_binary, Addr, Api, Binary, Coin, CosmosMsg, Decimal, Deps,
-    DepsMut, Env, MessageInfo, QueryRequest, Response, StdError, StdResult, Uint128, WasmMsg,
-    WasmQuery,
-};
-
-use crate::error::ContractError;
-use crate::operations::execute_swap_operation;
-use crate::state::{Config, CONFIG};
+use std::collections::HashMap;
 
 use astroport::asset::{addr_validate_to_lower, Asset, AssetInfo, PairInfo};
 use astroport::pair::{QueryMsg as PairQueryMsg, SimulationResponse};
@@ -15,10 +7,18 @@ use astroport::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation, MAX_SWAP_OPERATIONS,
 };
+use cosmwasm_std::{
+    entry_point, from_binary, to_binary, Addr, Api, Binary, Coin, CosmosMsg, Decimal, Deps,
+    DepsMut, Env, MessageInfo, QueryRequest, Response, StdError, StdResult, Uint128, WasmMsg,
+    WasmQuery,
+};
 use cw2::set_contract_version;
 use cw20::Cw20ReceiveMsg;
 use paloma_cosmwasm::{PalomaMsgWrapper, PalomaQuerier, PalomaQueryWrapper, SwapResponse};
-use std::collections::HashMap;
+
+use crate::error::ContractError;
+use crate::operations::execute_swap_operation;
+use crate::state::{Config, CONFIG};
 
 /// Contract name that is used for migration.
 const CONTRACT_NAME: &str = "astroport-router";

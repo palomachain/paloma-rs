@@ -1,17 +1,17 @@
+use std::collections::HashMap;
+
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     from_binary, from_slice, to_binary, Coin, Decimal, OwnedDeps, Querier, QuerierResult,
     QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
 };
-
-use std::collections::HashMap;
-
-use crate::asset::PairInfo;
-use crate::factory::QueryMsg as FactoryQueryMsg;
 use cw20::{BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 use paloma_cosmwasm::{
     PalomaQuery, PalomaQueryWrapper, PalomaRoute, TaxCapResponse, TaxRateResponse,
 };
+
+use crate::asset::PairInfo;
+use crate::factory::QueryMsg as FactoryQueryMsg;
 
 /// mock_dependencies is a drop-in replacement for cosmwasm_std::testing::mock_dependencies
 /// This uses the Astroport CustomQuerier.

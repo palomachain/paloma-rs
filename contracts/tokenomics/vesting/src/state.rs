@@ -1,10 +1,9 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
 use astroport::common::OwnershipProposal;
 use astroport::vesting::{OrderBy, VestingInfo};
 use cosmwasm_std::{Addr, Deps, StdResult};
 use cw_storage_plus::{Bound, Item, Map};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// ## Description
 /// This structure stores the main parameters for the generator vesting contract.
@@ -72,7 +71,8 @@ pub fn read_vesting_infos(
 
 #[test]
 fn read_vesting_infos_as_expected() {
-    use cosmwasm_std::{testing::mock_dependencies, Uint128};
+    use cosmwasm_std::testing::mock_dependencies;
+    use cosmwasm_std::Uint128;
 
     let mut deps = mock_dependencies();
 

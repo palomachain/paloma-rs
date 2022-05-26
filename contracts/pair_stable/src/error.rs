@@ -1,6 +1,7 @@
-use crate::math::{MAX_AMP, MAX_AMP_CHANGE, MIN_AMP_CHANGING_TIME};
 use cosmwasm_std::{OverflowError, StdError};
 use thiserror::Error;
+
+use crate::math::{MAX_AMP, MAX_AMP_CHANGE, MIN_AMP_CHANGING_TIME};
 
 /// ## Description
 /// This enum describes stableswap pair contract errors!

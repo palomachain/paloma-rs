@@ -25,8 +25,9 @@ mod mock_querier;
 mod testing;
 
 mod decimal_checked_ops {
-    use cosmwasm_std::{Decimal, Fraction, OverflowError, Uint128, Uint256};
     use std::convert::TryInto;
+
+    use cosmwasm_std::{Decimal, Fraction, OverflowError, Uint128, Uint256};
     pub trait DecimalCheckedOps {
         fn checked_add(self, other: Decimal) -> Result<Decimal, OverflowError>;
         fn checked_mul_u128(self, other: Uint128) -> Result<Uint128, OverflowError>;

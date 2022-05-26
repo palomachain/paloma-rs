@@ -1,12 +1,6 @@
-use crate::error::ContractError;
-use crate::state::{Config, BRIDGES, CONFIG, OWNERSHIP_PROPOSAL};
 use std::cmp::min;
+use std::collections::{HashMap, HashSet};
 
-use crate::migration;
-use crate::utils::{
-    build_distribute_msg, build_swap_msg, get_pool, try_build_swap_msg, validate_bridge,
-    BRIDGES_EXECUTION_MAX_DEPTH, BRIDGES_INITIAL_DEPTH,
-};
 use astroport::asset::{
     addr_validate_to_lower, native_asset_info, token_asset, token_asset_info, Asset, AssetInfo,
     PairInfo, ULUNA_DENOM, UUSD_DENOM,
@@ -26,7 +20,14 @@ use cosmwasm_std::{
 use cw2::{get_contract_version, set_contract_version};
 use cw20::Cw20ExecuteMsg;
 use paloma_cosmwasm::PalomaQueryWrapper;
-use std::collections::{HashMap, HashSet};
+
+use crate::error::ContractError;
+use crate::migration;
+use crate::state::{Config, BRIDGES, CONFIG, OWNERSHIP_PROPOSAL};
+use crate::utils::{
+    build_distribute_msg, build_swap_msg, get_pool, try_build_swap_msg, validate_bridge,
+    BRIDGES_EXECUTION_MAX_DEPTH, BRIDGES_INITIAL_DEPTH,
+};
 
 /// Contract name that is used for migration.
 const CONTRACT_NAME: &str = "astroport-maker";

@@ -1,10 +1,9 @@
+use cosmwasm_std::{Addr, Binary, Decimal, Uint128};
+use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::asset::{Asset, AssetInfo};
-
-use cosmwasm_std::{Addr, Binary, Decimal, Uint128};
-use cw20::Cw20ReceiveMsg;
 
 /// The default swap slippage
 pub const DEFAULT_SLIPPAGE: &str = "0.005";

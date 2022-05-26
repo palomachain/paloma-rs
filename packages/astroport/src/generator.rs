@@ -1,11 +1,13 @@
-use crate::asset::{Asset, AssetInfo};
-use crate::factory::PairType;
-use crate::restricted_vector::RestrictedVector;
+use std::fmt::Debug;
+
 use cosmwasm_std::{Addr, Decimal, Uint128, Uint64};
 use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
+
+use crate::asset::{Asset, AssetInfo};
+use crate::factory::PairType;
+use crate::restricted_vector::RestrictedVector;
 
 /// This structure describes the parameters used for creating a contract.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

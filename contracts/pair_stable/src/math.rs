@@ -1,5 +1,6 @@
-use cosmwasm_std::{Uint128, Uint256};
 use std::convert::TryFrom;
+
+use cosmwasm_std::{Uint128, Uint256};
 
 const N_COINS_SQUARED: u8 = 4;
 const ITERATIONS: u8 = 32;

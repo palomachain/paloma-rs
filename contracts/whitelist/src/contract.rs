@@ -1,19 +1,18 @@
-use schemars::JsonSchema;
 use std::fmt;
 
+use astroport::whitelist::{AdminListResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Addr, Api, Binary, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo, Response,
     StdResult,
 };
-
 use cw1::CanExecuteResponse;
 use cw2::set_contract_version;
+use schemars::JsonSchema;
 
 use crate::error::ContractError;
 use crate::state::{AdminList, ADMIN_LIST};
-use astroport::whitelist::{AdminListResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
 
 // Version info for contract migration.
 const CONTRACT_NAME: &str = "astroport-cw1-whitelist";
@@ -143,9 +142,10 @@ pub fn query_can_execute(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{coin, coins, BankMsg, StakingMsg, SubMsg, WasmMsg};
+
+    use super::*;
 
     #[test]
     fn instantiate_and_modify_config() {

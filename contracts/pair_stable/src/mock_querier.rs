@@ -1,12 +1,12 @@
+use std::collections::HashMap;
+
+use astroport::factory::FeeInfoResponse;
+use astroport::factory::QueryMsg::FeeInfo;
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     from_binary, from_slice, to_binary, Addr, Coin, Decimal, OwnedDeps, Querier, QuerierResult,
     QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
 };
-use std::collections::HashMap;
-
-use astroport::factory::FeeInfoResponse;
-use astroport::factory::QueryMsg::FeeInfo;
 use cw20::{BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 use paloma_cosmwasm::{
     PalomaQuery, PalomaQueryWrapper, PalomaRoute, TaxCapResponse, TaxRateResponse,

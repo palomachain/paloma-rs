@@ -1,8 +1,7 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
 use cosmwasm_std::{StdError, StdResult, Uint128};
 use cw20::{Cw20Coin, MinterResponse};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// This structure describes the parameters used for creating a token contract.
 /// TokenContract InstantiateMsg

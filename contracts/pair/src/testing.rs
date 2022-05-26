@@ -1,15 +1,5 @@
-use crate::contract::reply;
-use crate::contract::{
-    accumulate_prices, assert_max_spread, compute_swap, execute, instantiate, query_pair_info,
-    query_pool, query_reverse_simulation, query_share, query_simulation,
-};
-use crate::error::ContractError;
-use crate::mock_querier::mock_dependencies;
-use crate::response::MsgInstantiateContractResponse;
-use crate::state::Config;
 use astroport::asset::{Asset, AssetInfo, PairInfo};
 use astroport::factory::PairType;
-
 use astroport::pair::{
     Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolResponse, ReverseSimulationResponse,
     SimulationResponse, TWAP_PRECISION,
@@ -25,6 +15,15 @@ use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use paloma_cosmwasm::PalomaQueryWrapper;
 use proptest::prelude::*;
 use protobuf::Message;
+
+use crate::contract::{
+    accumulate_prices, assert_max_spread, compute_swap, execute, instantiate, query_pair_info,
+    query_pool, query_reverse_simulation, query_share, query_simulation, reply,
+};
+use crate::error::ContractError;
+use crate::mock_querier::mock_dependencies;
+use crate::response::MsgInstantiateContractResponse;
+use crate::state::Config;
 
 fn store_liquidity_token(deps: DepsMut<PalomaQueryWrapper>, msg_id: u64, contract_addr: String) {
     let data = MsgInstantiateContractResponse {

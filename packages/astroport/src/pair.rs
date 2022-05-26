@@ -1,11 +1,10 @@
+use cosmwasm_std::{from_slice, Addr, Binary, Decimal, Deps, StdResult, Uint128};
+use cw20::Cw20ReceiveMsg;
+use paloma_cosmwasm::PalomaQueryWrapper;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::asset::{Asset, AssetInfo};
-
-use cosmwasm_std::{from_slice, Addr, Binary, Decimal, Deps, StdResult, Uint128};
-use cw20::Cw20ReceiveMsg;
-use paloma_cosmwasm::PalomaQueryWrapper;
 
 /// The default swap slippage
 pub const DEFAULT_SLIPPAGE: &str = "0.005";

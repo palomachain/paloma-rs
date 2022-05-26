@@ -1,15 +1,14 @@
+use astroport::asset::addr_validate_to_lower;
+use astroport::xastro_token::{InstantiateMsg, QueryMsg};
 use cosmwasm_std::{
     attr, entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response,
     StdError, StdResult, Uint128,
 };
+use cw2::set_contract_version;
 use cw20::{AllAccountsResponse, BalanceResponse, Cw20Coin, Cw20ReceiveMsg};
 use cw20_base::allowances::{
     deduct_allowance, execute_decrease_allowance, execute_increase_allowance, query_allowance,
 };
-
-use crate::state::{capture_total_supply_history, get_total_supply_at, BALANCES};
-use astroport::asset::addr_validate_to_lower;
-use cw2::set_contract_version;
 use cw20_base::contract::{
     execute_update_marketing, execute_upload_logo, query_download_logo, query_marketing_info,
     query_minter, query_token_info,
@@ -20,7 +19,7 @@ use cw20_base::state::{MinterData, TokenInfo, TOKEN_INFO};
 use cw20_base::ContractError;
 use cw_storage_plus::Bound;
 
-use astroport::xastro_token::{InstantiateMsg, QueryMsg};
+use crate::state::{capture_total_supply_history, get_total_supply_at, BALANCES};
 
 /// Contract name that is used for migration.
 const CONTRACT_NAME: &str = "astroport-xastro-token";

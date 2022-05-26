@@ -1,15 +1,13 @@
+use astroport::asset::addr_validate_to_lower;
+use astroport::token::{InstantiateMsg, MigrateMsg};
 use cosmwasm_std::{
     entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
-
 use cw2::set_contract_version;
 use cw20_base::contract::{create_accounts, execute as cw20_execute, query as cw20_query};
 use cw20_base::msg::{ExecuteMsg, QueryMsg};
 use cw20_base::state::{MinterData, TokenInfo, TOKEN_INFO};
 use cw20_base::ContractError;
-
-use astroport::asset::addr_validate_to_lower;
-use astroport::token::{InstantiateMsg, MigrateMsg};
 
 /// Contract name that is used for migration.
 const CONTRACT_NAME: &str = "astroport-token";

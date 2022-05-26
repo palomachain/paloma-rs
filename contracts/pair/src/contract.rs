@@ -1,30 +1,30 @@
-use crate::error::ContractError;
-use crate::state::{Config, CONFIG};
+use std::str::FromStr;
+use std::vec;
 
+use astroport::asset::{addr_validate_to_lower, format_lp_token_name, Asset, AssetInfo, PairInfo};
+use astroport::factory::PairType;
+use astroport::generator::Cw20HookMsg as GeneratorHookMsg;
+use astroport::math::{to_decimal, to_decimal256};
+use astroport::pair::{
+    migration_check, ConfigResponse, CumulativePricesResponse, Cw20HookMsg, ExecuteMsg,
+    InstantiateMsg, MigrateMsg, PoolResponse, QueryMsg, ReverseSimulationResponse,
+    SimulationResponse, DEFAULT_SLIPPAGE, MAX_ALLOWED_SLIPPAGE, TWAP_PRECISION,
+};
+use astroport::querier::{query_factory_config, query_fee_info, query_supply};
+use astroport::token::InstantiateMsg as TokenInstantiateMsg;
 use cosmwasm_std::{
     attr, entry_point, from_binary, to_binary, Addr, Binary, CosmosMsg, Decimal, Decimal256, Deps,
     DepsMut, Env, Isqrt, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg,
     Uint128, Uint256, WasmMsg,
 };
-
-use crate::response::MsgInstantiateContractResponse;
-use astroport::asset::{addr_validate_to_lower, format_lp_token_name, Asset, AssetInfo, PairInfo};
-use astroport::factory::PairType;
-use astroport::generator::Cw20HookMsg as GeneratorHookMsg;
-use astroport::math::{to_decimal, to_decimal256};
-use astroport::pair::{migration_check, ConfigResponse, DEFAULT_SLIPPAGE, MAX_ALLOWED_SLIPPAGE};
-use astroport::pair::{
-    CumulativePricesResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, PoolResponse,
-    QueryMsg, ReverseSimulationResponse, SimulationResponse, TWAP_PRECISION,
-};
-use astroport::querier::{query_factory_config, query_fee_info, query_supply};
-use astroport::token::InstantiateMsg as TokenInstantiateMsg;
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use paloma_cosmwasm::PalomaQueryWrapper;
 use protobuf::Message;
-use std::str::FromStr;
-use std::vec;
+
+use crate::error::ContractError;
+use crate::response::MsgInstantiateContractResponse;
+use crate::state::{Config, CONFIG};
 
 /// Contract name that is used for migration.
 const CONTRACT_NAME: &str = "astroport-pair";
