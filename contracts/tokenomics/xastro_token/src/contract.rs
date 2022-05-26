@@ -20,7 +20,6 @@ use cw20_base::state::{MinterData, TokenInfo, TOKEN_INFO};
 use cw20_base::ContractError;
 use cw_storage_plus::Bound;
 
-use crate::utils::deserialize_pair;
 use astroport::xastro_token::{InstantiateMsg, QueryMsg};
 
 /// Contract name that is used for migration.
@@ -693,15 +692,16 @@ pub fn query_all_accounts(
     limit: Option<u32>,
 ) -> StdResult<AllAccountsResponse> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start = start_after.map(Bound::exclusive);
+    let start_after = start_after
+        .map(|addr| deps.api.addr_validate(&addr))
+        .transpose()?;
+    let start_after = start_after.as_ref().map(Bound::exclusive);
 
-    let accounts: Result<Vec<_>, _> = BALANCES
-        .range(deps.storage, start, None, Order::Ascending)
+    let accounts = BALANCES
+        .range(deps.storage, start_after, None, Order::Ascending)
         .take(limit)
-        .map(deserialize_pair)
-        .collect();
+        .map(|r| r.map(|(addr, _)| addr.to_string()))
+        .collect::<StdResult<_>>()?;
 
-    Ok(AllAccountsResponse {
-        accounts: accounts?,
-    })
+    Ok(AllAccountsResponse { accounts })
 }

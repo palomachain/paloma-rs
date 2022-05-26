@@ -1,7 +1,9 @@
 use crate::contract::{execute, instantiate, query_balance, query_balance_at};
 use crate::state::get_total_supply_at;
 use astroport::xastro_token::InstantiateMsg;
-use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR};
+use cosmwasm_std::testing::{
+    mock_dependencies, mock_dependencies_with_balance, mock_env, mock_info, MOCK_CONTRACT_ADDR,
+};
 use cosmwasm_std::{
     coins, Addr, Binary, BlockInfo, ContractInfo, CosmosMsg, Deps, DepsMut, Env, StdError, SubMsg,
     Timestamp, Uint128, WasmMsg,
@@ -35,6 +37,7 @@ pub fn test_mock_env(mock_env_params: MockEnvParams) -> Env {
         contract: ContractInfo {
             address: Addr::unchecked(MOCK_CONTRACT_ADDR),
         },
+        transaction: None,
     }
 }
 
@@ -108,7 +111,7 @@ mod instantiate {
 
     #[test]
     fn basic() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         let amount = Uint128::from(11223344u128);
         let instantiate_msg = InstantiateMsg {
             name: "Cash Token".to_string(),
@@ -142,7 +145,7 @@ mod instantiate {
 
     #[test]
     fn mintable() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         let amount = Uint128::new(11223344);
         let minter = String::from("asmodat");
         let limit = Uint128::new(511223344);
@@ -188,7 +191,7 @@ mod instantiate {
 
     #[test]
     fn mintable_over_cap() {
-        let mut deps = mock_dependencies(&[]);
+        let mut deps = mock_dependencies();
         let amount = Uint128::new(11223344);
         let minter = String::from("asmodat");
         let limit = Uint128::new(11223300);
@@ -217,7 +220,7 @@ mod instantiate {
 
 #[test]
 fn can_mint_by_minter() {
-    let mut deps = mock_dependencies(&[]);
+    let mut deps = mock_dependencies();
 
     let genesis = String::from("genesis");
     let amount = Uint128::new(11223344);
@@ -263,7 +266,7 @@ fn can_mint_by_minter() {
 
 #[test]
 fn others_cannot_mint() {
-    let mut deps = mock_dependencies(&[]);
+    let mut deps = mock_dependencies();
     do_instantiate_with_minter(
         deps.as_mut(),
         &String::from("genesis"),
@@ -284,7 +287,7 @@ fn others_cannot_mint() {
 
 #[test]
 fn no_one_mints_if_minter_unset() {
-    let mut deps = mock_dependencies(&[]);
+    let mut deps = mock_dependencies();
     do_instantiate(deps.as_mut(), &String::from("genesis"), Uint128::new(1234));
 
     let msg = ExecuteMsg::Mint {
@@ -299,7 +302,7 @@ fn no_one_mints_if_minter_unset() {
 
 #[test]
 fn instantiate_multiple_accounts() {
-    let mut deps = mock_dependencies(&[]);
+    let mut deps = mock_dependencies();
     let amount1 = Uint128::from(11223344u128);
     let addr1 = String::from("addr0001");
     let amount2 = Uint128::from(7890987u128);
@@ -340,7 +343,7 @@ fn instantiate_multiple_accounts() {
 
 #[test]
 fn transfer() {
-    let mut deps = mock_dependencies(&coins(2, "token"));
+    let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
     let addr1 = String::from("addr0001");
     let addr2 = String::from("addr0002");
     let amount1 = Uint128::from(12340000u128);
@@ -415,7 +418,7 @@ fn transfer() {
 
 #[test]
 fn burn() {
-    let mut deps = mock_dependencies(&coins(2, "token"));
+    let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
     let addr1 = String::from("addr0001");
     let amount1 = Uint128::from(12340000u128);
     let burn = Uint128::from(76543u128);
@@ -476,7 +479,7 @@ fn burn() {
 
 #[test]
 fn send() {
-    let mut deps = mock_dependencies(&coins(2, "token"));
+    let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
     let addr1 = String::from("addr0001");
     let contract = String::from("addr0002");
     let amount1 = Uint128::from(12340000u128);
@@ -562,7 +565,7 @@ fn send() {
 
 #[test]
 fn snapshots_are_taken_and_retrieved_correctly() {
-    let mut deps = mock_dependencies(&[]);
+    let mut deps = mock_dependencies();
 
     let addr1 = String::from("addr1");
     let addr2 = String::from("addr2");
