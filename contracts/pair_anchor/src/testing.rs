@@ -3,6 +3,7 @@ use crate::contract::{
     query_share, query_simulation,
 };
 use crate::error::ContractError;
+use crate::market::{Cw20HookMsg as AnchorCw20HookMsg, ExecuteMsg as AnchorExecuteMsg};
 use crate::mock_querier::mock_dependencies;
 use astroport::asset::{Asset, AssetInfo, PairInfo};
 use astroport::pair::InstantiateMsg;
@@ -15,7 +16,6 @@ use cosmwasm_std::{
     ReplyOn, SubMsg, Timestamp, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
-use moneymarket::market::{Cw20HookMsg as AnchorCw20HookMsg, ExecuteMsg as AnchorExecuteMsg};
 
 const MOCK_ANCHOR_ADDR: &str = "anchor";
 const MOCK_ANCHOR_TOKEN: &str = "addr1aust";

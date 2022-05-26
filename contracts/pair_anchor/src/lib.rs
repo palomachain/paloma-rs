@@ -1,4 +1,5 @@
 pub mod contract;
+pub mod market;
 pub mod state;
 
 pub mod error;
