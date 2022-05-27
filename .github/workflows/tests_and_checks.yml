@@ -66,3 +66,7 @@ jobs:
           command: fmt
           args: --all -- --check
 
+      - run: ./bin/generate_schemas.sh
+      - name: Schema Changes
+        run: git diff --exit-code
+
