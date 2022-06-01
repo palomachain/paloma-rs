@@ -1,42 +1,87 @@
-# Makefile for production builds. This is not meant, or optimized, for incremental or debug builds. Use the devnet for
-# development. For the sake of decentralization, we specifically avoid the use of prebuilt containers wherever possible
-# to increase diversity - operators sourcing their compiler binaries from different sources is a good thing.
+bridge_SOURCE=wormhole
+token_bridge_SOURCE=token_bridge_terra
+nft_bridge_SOURCE=nft_bridge
 
-SHELL = /usr/bin/env bash
-MAKEFLAGS += --no-builtin-rules
+SOURCE_FILES=$(shell find . -name "*.rs" -or -name "*.lock" -or -name "*.toml" | grep -v target)
 
-PREFIX ?= /usr/local
-OUT = build
-BIN = $(OUT)/bin
+PACKAGES=$(shell find . -name "Cargo.toml" | grep -E 'packages|contracts' | xargs cat | grep "name *=" | cut -d' ' -f3 | sed s/\"//g | sed s/-/_/g)
+WASMS=$(patsubst %, artifacts/%.wasm, $(PACKAGES))
 
--include Makefile.help
+-include ../Makefile.help
 
-VERSION = $(shell git describe --tags --dirty)
+.PHONY: artifacts
+## Build contracts.
+artifacts: artifacts/checksums.txt
 
-.PHONY: dirs
-dirs: Makefile
-	@mkdir -p $(BIN)
+VALID_mainnet=1
+VALID_testnet=1
+VALID_devnet=1
+.PHONY: check-network
+check-network:
+ifndef VALID_$(NETWORK)
+	$(error Invalid or missing NETWORK. Please call with `$(MAKE) $(MAKECMDGOALS) NETWORK=[mainnet | testnet | devnet]`)
+endif
 
-.PHONY: install
-## Install guardiand binary
-install:
-	install -m 775 $(BIN)/* $(PREFIX)/bin
-	setcap cap_ipc_lock=+ep $(PREFIX)/bin/guardiand
+$(WASMS) artifacts/checksums.txt: $(SOURCE_FILES)
+	DOCKER_BUILDKIT=1 docker build --target artifacts -o artifacts .
 
-.PHONY: generate
-generate: dirs
-	cd tools && ./build.sh
-	rm -rf bridge
-	rm -rf node/pkg/proto
-	tools/bin/buf generate
+payer-$(NETWORK).json:
+	$(error Missing private key in payer-$(NETWORK).json)
 
-.PHONY: node
-## Build guardiand binary
-node: $(BIN)/guardiand
+.PHONY: deploy/bridge
+## Deploy core bridge
+deploy/bridge: bridge-code-id-$(NETWORK).txt
 
-.PHONY: $(BIN)/guardiand
-$(BIN)/guardiand: dirs generate
-	@# The go-ethereum and celo-blockchain packages both implement secp256k1 using the exact same header, but that causes duplicate symbols.
-	cd node && go build -ldflags "-X github.com/certusone/wormhole/node/pkg/version.version=${VERSION} -extldflags -Wl,--allow-multiple-definition" \
-	  -mod=readonly -o ../$(BIN)/guardiand \
-	  github.com/certusone/wormhole/node
+.PHONY: deploy/token_bridge
+## Deploy token bridge
+deploy/token_bridge: token_bridge-code-id-$(NETWORK).txt
+
+.PHONY: deploy/nft_bridge
+## Deploy NFT bridge
+deploy/nft_bridge: nft_bridge-code-id-$(NETWORK).txt
+
+%-code-id-$(NETWORK).txt: check-network tools/node_modules payer-$(NETWORK).json artifacts
+	@echo "Deploying artifacts/$($*_SOURCE).wasm on $(NETWORK)"
+	@node tools/deploy_single.js \
+		--network $(NETWORK) \
+		--artifact artifacts/$($*_SOURCE).wasm \
+		--mnemonic "$$(cat payer-$(NETWORK).json)" \
+		| grep -i "code id" | sed s/[^0-9]//g \
+		> $@
+	@echo "Deployed at code id $$(cat $@) (stored in $@)"
+
+tools/node_modules: tools/package-lock.json
+	cd tools && npm ci
+
+LocalTerra:
+	mkdir LocalTerra && \
+	cd LocalTerra && \
+	git init && \
+	git remote add origin  https://www.github.com/terra-money/LocalTerra.git && \
+	git fetch --depth 1 origin 958ff795f261f5ff2efc7b56604e2434eb76f7c4 && \
+	git checkout FETCH_HEAD
+
+test/node_modules: test/package-lock.json
+	cd test && npm ci
+
+.PHONY: unit-test
+## Run unit tests
+unit-test:
+	cargo test -p wormhole-bridge-terra
+	cargo test -p token-bridge-terra
+
+.PHONY: test
+## Run unit and integration tests
+test: artifacts test/node_modules LocalTerra unit-test
+	@if pgrep terrad; then echo "Error: terrad already running. Stop it before running tests"; exit 1; fi
+	cd LocalTerra && docker compose up --detach
+	sleep 5
+	cd test && npm run test || (cd ../LocalTerra && docker compose down && exit 1)
+	cd LocalTerra && docker compose down
+
+.PHONY: clean
+clean:
+	rm -f $(WASMS)
+	rm -f artifacts/checksums.txt
+	rm -rf tools/node_modules
+	rm -rf test/node_modules
