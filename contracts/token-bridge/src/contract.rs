@@ -16,10 +16,12 @@ use wormhole::error::ContractError;
 use wormhole::msg::{ExecuteMsg as WormholeExecuteMsg, QueryMsg as WormholeQueryMsg};
 use wormhole::state::{vaa_archive_add, vaa_archive_check, GovernancePacket, ParsedVAA};
 
+#[cfg(not(feature = "library"))]
+use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coin, entry_point, to_binary, BankMsg, Binary, CanonicalAddr, Coin, CosmosMsg, Deps, DepsMut,
-    Empty, Env, MessageInfo, QueryRequest, Reply, Response, StdError, StdResult, SubMsg, Uint128,
-    WasmMsg, WasmQuery,
+    coin, to_binary, BankMsg, Binary, CanonicalAddr, Coin, CosmosMsg, Deps, DepsMut, Empty, Env,
+    MessageInfo, QueryRequest, Reply, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
+    WasmQuery,
 };
 
 use crate::msg::{
@@ -158,7 +160,7 @@ pub fn coins_after_tax(deps: DepsMut, coins: Vec<Coin>) -> StdResult<Vec<Coin>> 
     let mut res = vec![];
     for coin in coins {
         let asset = Asset {
-            amount: coin.amount.clone(),
+            amount: coin.amount,
             info: AssetInfo::NativeToken {
                 denom: coin.denom.clone(),
             },
@@ -184,7 +186,7 @@ fn parse_vaa(deps: Deps, block_time: u64, data: &Binary) -> StdResult<ParsedVAA>
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::RegisterAssetHook { asset_id } => {
-            handle_register_asset(deps, env, info, &asset_id.as_slice())
+            handle_register_asset(deps, env, info, &asset_id)
         }
         ExecuteMsg::InitiateTransfer {
             asset,
@@ -290,13 +292,13 @@ fn handle_register_asset(
     let mut bucket = wrapped_asset(deps.storage);
     let result = bucket.load(asset_id);
     let result = result.map_err(|_| ContractError::RegistrationForbidden.std())?;
-    if result != HumanAddr::from(WRAPPED_ASSET_UPDATING) {
+    if result != WRAPPED_ASSET_UPDATING {
         return ContractError::AssetAlreadyRegistered.std_err();
     }
 
     bucket.save(asset_id, &info.sender.to_string())?;
 
-    let contract_address: CanonicalAddr = deps.api.addr_canonicalize(&info.sender.as_str())?;
+    let contract_address: CanonicalAddr = deps.api.addr_canonicalize(info.sender.as_str())?;
     wrapped_asset_address(deps.storage).save(contract_address.as_slice(), &asset_id.to_vec())?;
 
     Ok(Response::new()
@@ -330,7 +332,7 @@ fn handle_attest_meta(
     }
 
     let cfg = config_read(deps.storage).load()?;
-    let asset_id = build_asset_id(meta.token_chain, &meta.token_address.as_slice());
+    let asset_id = build_asset_id(meta.token_chain, &meta.token_address);
 
     // If a CW20 wrapped already exists and this message has a newer sequence ID
     // we allow updating the metadata. If not, we create a brand new token.
@@ -431,7 +433,7 @@ fn handle_create_asset_meta_token(
                 nonce,
             })?,
             // forward coins sent to this message
-            funds: coins_after_tax(deps, info.funds.clone())?,
+            funds: coins_after_tax(deps, info.funds)?,
         }))
         .add_attribute("meta.token_chain", CHAIN_ID.to_string())
         .add_attribute("meta.token", asset_address)
@@ -469,7 +471,7 @@ fn handle_create_asset_meta_native_token(
                 nonce,
             })?,
             // forward coins sent to this message
-            funds: coins_after_tax(deps, info.funds.clone())?,
+            funds: coins_after_tax(deps, info.funds)?,
         }))
         .add_attribute("meta.token_chain", CHAIN_ID.to_string())
         .add_attribute("meta.symbol", symbol)
@@ -561,8 +563,8 @@ fn submit_vaa(deps: DepsMut, env: Env, info: MessageInfo, data: &Binary) -> StdR
     }
 }
 
-fn handle_governance_payload(deps: DepsMut, env: Env, data: &Vec<u8>) -> StdResult<Response> {
-    let gov_packet = GovernancePacket::deserialize(&data)?;
+fn handle_governance_payload(deps: DepsMut, env: Env, data: &[u8]) -> StdResult<Response> {
+    let gov_packet = GovernancePacket::deserialize(data)?;
     let module = get_string_from_32(&gov_packet.module);
 
     if module != "TokenBridge" {
@@ -583,7 +585,7 @@ fn handle_governance_payload(deps: DepsMut, env: Env, data: &Vec<u8>) -> StdResu
 }
 
 fn handle_upgrade_contract(_deps: DepsMut, env: Env, data: &Vec<u8>) -> StdResult<Response> {
-    let UpgradeContract { new_contract } = UpgradeContract::deserialize(&data)?;
+    let UpgradeContract { new_contract } = UpgradeContract::deserialize(data)?;
 
     Ok(Response::new()
         .add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
@@ -598,7 +600,7 @@ fn handle_register_chain(deps: DepsMut, _env: Env, data: &Vec<u8>) -> StdResult<
     let RegisterChain {
         chain_id,
         chain_address,
-    } = RegisterChain::deserialize(&data)?;
+    } = RegisterChain::deserialize(data)?;
 
     let existing = bridge_contracts_read(deps.storage).load(&chain_id.to_be_bytes());
     if existing.is_ok() {
@@ -615,6 +617,7 @@ fn handle_register_chain(deps: DepsMut, _env: Env, data: &Vec<u8>) -> StdResult<
         .add_attribute("chain_address", hex::encode(chain_address)))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_complete_transfer(
     deps: DepsMut,
     env: Env,
@@ -622,11 +625,11 @@ fn handle_complete_transfer(
     emitter_chain: u16,
     emitter_address: Vec<u8>,
     transfer_type: TransferType<()>,
-    data: &Vec<u8>,
+    data: &[u8],
     relayer_address: &HumanAddr,
 ) -> StdResult<Response> {
-    let transfer_info = TransferInfo::deserialize(&data)?;
-    match transfer_info.token_address.as_slice()[0] {
+    let transfer_info = TransferInfo::deserialize(data)?;
+    match transfer_info.token_address[0] {
         1 => handle_complete_transfer_token_native(
             deps,
             env,
@@ -650,6 +653,7 @@ fn handle_complete_transfer(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_complete_transfer_token(
     deps: DepsMut,
     _env: Env,
@@ -657,13 +661,13 @@ fn handle_complete_transfer_token(
     emitter_chain: u16,
     emitter_address: Vec<u8>,
     transfer_type: TransferType<()>,
-    data: &Vec<u8>,
+    data: &[u8],
     relayer_address: &HumanAddr,
 ) -> StdResult<Response> {
     let transfer_info = match transfer_type {
-        TransferType::WithoutPayload => TransferInfo::deserialize(&data)?,
+        TransferType::WithoutPayload => TransferInfo::deserialize(data)?,
         TransferType::WithPayload { payload: _ } => {
-            TransferWithPayloadInfo::deserialize(&data)?.transfer_info
+            TransferWithPayloadInfo::deserialize(data)?.transfer_info
         }
     };
 
@@ -710,7 +714,7 @@ fn handle_complete_transfer_token(
         // Check if this asset is already deployed
         let contract_addr = wrapped_asset_read(deps.storage).load(&asset_id).ok();
 
-        return if let Some(contract_addr) = contract_addr {
+        if let Some(contract_addr) = contract_addr {
             // Asset already deployed, just mint
 
             let mut messages = vec![CosmosMsg::Wasm(WasmMsg::Execute {
@@ -742,7 +746,7 @@ fn handle_complete_transfer_token(
                 .add_attribute("fee", fee.to_string()))
         } else {
             Err(StdError::generic_err("Wrapped asset not deployed. To deploy, invoke CreateWrapped with the associated AssetMeta"))
-        };
+        }
     } else {
         let token_address = transfer_info.token_address.as_slice().get_address(0);
 
@@ -795,6 +799,7 @@ fn handle_complete_transfer_token(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_complete_transfer_token_native(
     mut deps: DepsMut,
     _env: Env,
@@ -802,13 +807,13 @@ fn handle_complete_transfer_token_native(
     emitter_chain: u16,
     emitter_address: Vec<u8>,
     transfer_type: TransferType<()>,
-    data: &Vec<u8>,
+    data: &[u8],
     relayer_address: &HumanAddr,
 ) -> StdResult<Response> {
     let transfer_info = match transfer_type {
-        TransferType::WithoutPayload => TransferInfo::deserialize(&data)?,
+        TransferType::WithoutPayload => TransferInfo::deserialize(data)?,
         TransferType::WithPayload { payload: () } => {
-            TransferWithPayloadInfo::deserialize(&data)?.transfer_info
+            TransferWithPayloadInfo::deserialize(data)?.transfer_info
         }
     };
 
@@ -848,7 +853,7 @@ fn handle_complete_transfer_token_native(
     }
 
     // Wipe the native byte marker and extract the serialized denom.
-    let mut token_address = transfer_info.token_address.clone();
+    let mut token_address = transfer_info.token_address;
     let token_address = token_address.as_mut_slice();
     token_address[0] = 0;
 
@@ -883,6 +888,7 @@ fn handle_complete_transfer_token_native(
         .add_attribute("fee", fee.to_string()))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_initiate_transfer(
     deps: DepsMut,
     env: Env,
@@ -922,6 +928,7 @@ fn handle_initiate_transfer(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_initiate_transfer_token(
     mut deps: DepsMut,
     env: Env,
@@ -1119,7 +1126,7 @@ fn handle_initiate_transfer_token(
         .add_attribute(
             "transfer.sender",
             hex::encode(extend_address_to_32(
-                &deps.api.addr_canonicalize(&info.sender.as_str())?,
+                &deps.api.addr_canonicalize(info.sender.as_str())?,
             )),
         )
         .add_attribute("transfer.recipient_chain", recipient_chain.to_string())
@@ -1139,6 +1146,7 @@ fn format_native_denom_symbol(denom: &str) -> String {
     denom.to_uppercase()[1..3].to_string() + "T"
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_initiate_transfer_native_token(
     deps: DepsMut,
     env: Env,
@@ -1205,14 +1213,14 @@ fn handle_initiate_transfer_native_token(
         },
     };
 
-    let sender = deps.api.addr_canonicalize(&info.sender.as_str())?;
+    let sender = deps.api.addr_canonicalize(info.sender.as_str())?;
     messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: cfg.wormhole_contract,
         msg: to_binary(&WormholeExecuteMsg::PostMessage {
             message: Binary::from(token_bridge_message.serialize()),
             nonce,
         })?,
-        funds: coins_after_tax(deps, info.funds.clone())?,
+        funds: coins_after_tax(deps, info.funds)?,
     }));
 
     Ok(Response::new()
@@ -1305,6 +1313,6 @@ pub fn build_native_id(denom: &str) -> Vec<u8> {
     asset_address
 }
 
-fn is_governance_emitter(cfg: &ConfigInfo, emitter_chain: u16, emitter_address: &Vec<u8>) -> bool {
-    cfg.gov_chain == emitter_chain && cfg.gov_address == emitter_address.clone()
+fn is_governance_emitter(cfg: &ConfigInfo, emitter_chain: u16, emitter_address: &[u8]) -> bool {
+    cfg.gov_chain == emitter_chain && cfg.gov_address == emitter_address
 }

@@ -24,5 +24,5 @@ jobs:
       - run: cargo fetch --verbose --locked
       - run: cargo check --verbose --workspace --locked --all-targets
       - run: cargo test --verbose --workspace --locked
-#      - run: cargo clippy --all --all-targets -- -D warnings
+      - run: cargo clippy --all --all-targets -- -D warnings
       - run: cargo fmt --all -- --check

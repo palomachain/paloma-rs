@@ -178,8 +178,7 @@ pub struct TransferInfo {
 }
 
 impl TransferInfo {
-    pub fn deserialize(data: &Vec<u8>) -> StdResult<Self> {
-        let data = data.as_slice();
+    pub fn deserialize(data: &[u8]) -> StdResult<Self> {
         let amount = data.get_u256(0);
         let token_address = data.get_bytes32(32).to_vec();
         let token_chain = data.get_u16(64);
@@ -226,7 +225,7 @@ pub struct TransferWithPayloadInfo {
 }
 
 impl TransferWithPayloadInfo {
-    pub fn deserialize(data: &Vec<u8>) -> StdResult<Self> {
+    pub fn deserialize(data: &[u8]) -> StdResult<Self> {
         let transfer_info = TransferInfo::deserialize(data)?;
         let payload = TransferWithPayloadInfo::get_payload(data);
 
@@ -238,8 +237,8 @@ impl TransferWithPayloadInfo {
     pub fn serialize(&self) -> Vec<u8> {
         [self.transfer_info.serialize(), self.payload.clone()].concat()
     }
-    pub fn get_payload(data: &Vec<u8>) -> Vec<u8> {
-        return data[132..].to_vec();
+    pub fn get_payload(data: &[u8]) -> Vec<u8> {
+        data[132..].to_vec()
     }
 }
 
