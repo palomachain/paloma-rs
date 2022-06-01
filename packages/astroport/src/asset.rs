@@ -19,7 +19,7 @@ pub const UUSD_DENOM: &str = "uusd";
 pub const ULUNA_DENOM: &str = "uluna";
 
 /// ## Description
-/// This enum describes a Terra asset (native or CW20).
+/// This enum describes a paloma asset (native or CW20).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Asset {
     /// Information about an asset stored in a [`AssetInfo`] struct
@@ -53,9 +53,9 @@ impl Asset {
     pub fn compute_tax(&self, querier: &QuerierWrapper<PalomaQueryWrapper>) -> StdResult<Uint128> {
         let amount = self.amount;
         if let AssetInfo::NativeToken { denom } = &self.info {
-            let terra_querier = PalomaQuerier::new(querier);
-            let tax_rate: Decimal = (terra_querier.query_tax_rate()?).rate;
-            let tax_cap: Uint128 = (terra_querier.query_tax_cap(denom.to_string())?).cap;
+            let paloma_querier = PalomaQuerier::new(querier);
+            let tax_rate: Decimal = (paloma_querier.query_tax_rate()?).rate;
+            let tax_cap: Uint128 = (paloma_querier.query_tax_cap(denom.to_string())?).cap;
             Ok(std::cmp::min(
                 (amount.checked_sub(amount.multiply_ratio(
                     DECIMAL_FRACTION,
@@ -154,7 +154,7 @@ impl Asset {
 /// ```
 /// # use cosmwasm_std::Addr;
 /// # use astroport::asset::AssetInfo::{NativeToken, Token};
-/// Token { contract_addr: Addr::unchecked("terra...") };
+/// Token { contract_addr: Addr::unchecked("paloma...") };
 /// NativeToken { denom: String::from("uluna") };
 /// ```
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -371,9 +371,9 @@ pub fn token_asset(contract_addr: Addr, amount: Uint128) -> Asset {
     }
 }
 
-/// Returns an [`AssetInfo`] object representing the denomination for a Terra native asset.
+/// Returns an [`AssetInfo`] object representing the denomination for a Paloma native asset.
 /// ## Params
-/// * **denom** is a [`String`] object representing the denomination of the Terra native asset.
+/// * **denom** is a [`String`] object representing the denomination of the Paloma native asset.
 pub fn native_asset_info(denom: String) -> AssetInfo {
     AssetInfo::NativeToken { denom }
 }

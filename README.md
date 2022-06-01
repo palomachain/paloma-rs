@@ -2,7 +2,7 @@
 
 [![codecov](https://codecov.io/gh/astroport-fi/astroport-core/branch/main/graph/badge.svg?token=ROOLZTGZMM)](https://codecov.io/gh/astroport-fi/astroport-core)
 
-Multi pool type automated market-maker (AMM) protocol powered by smart contracts on the [Terra](https://terra.money) blockchain.
+Multi pool type automated market-maker (AMM) protocol powered by smart contracts on the [Paloma](https://github.com/palomachain/paloma) blockchain.
 
 ## Contracts diagram
 
@@ -15,7 +15,6 @@ Multi pool type automated market-maker (AMM) protocol powered by smart contracts
 | [`factory`](contracts/factory)                             | Pool creation factory                        |
 | [`pair`](contracts/pair)                                   | Pair with x*y=k curve                        |
 | [`pair_stable`](contracts/pair_stable)                     | Pair with stableswap invariant curve         |
-| [`pair_stable_bluna`](contracts/pair_stable_bluna)         | Pair with stableswap invariant curve handling bLUNA rewards for LPs |
 | [`token`](contracts/token)                                 | CW20 (ERC20 equivalent) token implementation |
 | [`router`](contracts/router)                               | Multi-hop trade router                       |
 | [`oracle`](contracts/periphery/oracle)                     | TWAP oracles for x*y=k pool types            |
@@ -54,8 +53,8 @@ Run the following from the repository root
 The optimized contracts are generated in the artifacts/ directory.
 
 #### You can compile each contract:
-Go to contract directory and run 
-    
+Go to contract directory and run
+
 ```
 RUSTFLAGS='-C link-arg=-s' cargo wasm
 cp ../../target/wasm32-unknown-unknown/release/astroport_token.wasm .

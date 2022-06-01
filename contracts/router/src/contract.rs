@@ -374,7 +374,7 @@ fn simulate_swap_operations(
 ) -> Result<SimulateSwapOperationsResponse, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
     let astroport_factory = config.astroport_factory;
-    let terra_querier = PalomaQuerier::new(&deps.querier);
+    let paloma_querier = PalomaQuerier::new(&deps.querier);
 
     let operations_len = operations.len();
     if operations_len == 0 {
@@ -410,7 +410,7 @@ fn simulate_swap_operations(
                     offer_amount = offer_amount.checked_sub(asset.compute_tax(&deps.querier)?)?;
                 }
 
-                let res: SwapResponse = terra_querier.query_swap(
+                let res: SwapResponse = paloma_querier.query_swap(
                     Coin {
                         denom: offer_denom,
                         amount: offer_amount,

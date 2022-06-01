@@ -10,11 +10,11 @@ Initializes the contract with required addresses and the `governance_percent`.
 
 ```json
 {
-  "owner": "terra...",
-  "astro_token_contract": "terra...",
-  "factory_contract": "terra...",
-  "staking_contract": "terra...",
-  "governance_contract": "terra...",
+  "owner": "paloma...",
+  "astro_token_contract": "paloma...",
+  "factory_contract": "paloma...",
+  "staking_contract": "paloma...",
+  "governance_contract": "paloma...",
   "governance_percent": 20,
   "max_spread": 23.3
 }
@@ -30,8 +30,8 @@ Swaps accrued fee tokens to ASTRO.
 {
   "collect": {
     "pair_addresses": [
-      "terra...",
-      "terra..."
+      "paloma...",
+      "paloma..."
     ]
   }
 }
@@ -44,10 +44,10 @@ Updates the contract's general settings. All fields are optional.
 ```json
 {
   "update_config": {
-    "factory_contract": "terra...",
-    "staking_contract": "terra...",
+    "factory_contract": "paloma...",
+    "staking_contract": "paloma...",
     "governance_contract": {
-      "set": "terra..."
+      "set": "paloma..."
     },
     "governance_percent": "20",
     "max_spread": 23.3
@@ -62,7 +62,7 @@ Creates a proposal to change contract ownership. The proposal validity period is
 ```json
 {
   "propose_new_owner": {
-    "owner": "terra...",
+    "owner": "paloma...",
     "expires_in": 1234567
   }
 }
@@ -112,7 +112,7 @@ Returns token balances for each specified asset held by the Maker.
     "assets": [
       {
         "token": {
-          "contract_addr": "terra..."
+          "contract_addr": "paloma..."
         }
       },
       {

@@ -14,4 +14,4 @@ pub use route::PalomaRoute;
 // This export is added to all contracts that import this package, signifying that they require
 // "paloma" support on the chain they run on.
 #[no_mangle]
-extern "C" fn requires_terra() {}
+extern "C" fn requires_paloma() {}

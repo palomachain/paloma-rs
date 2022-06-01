@@ -45,11 +45,11 @@ Initializes a new stableswap pair.
 ```json
 {
   "token_code_id": 123,
-  "factory_addr": "terra...",
+  "factory_addr": "paloma...",
   "asset_infos": [
     {
       "token": {
-        "contract_addr": "terra..."
+        "contract_addr": "paloma..."
       }
     },
     {
@@ -73,7 +73,7 @@ Withdraws liquidity or assets that were swapped to (ask assets from a swap opera
 ```json
 {
   "receive": {
-    "sender": "terra...",
+    "sender": "paloma...",
     "amount": "123",
     "msg": "<base64_encoded_json_string>"
   }
@@ -95,7 +95,7 @@ __NOTE__: you should increase your token allowance for the pool before providing
         {
           "info": {
             "token": {
-              "contract_addr": "terra..."
+              "contract_addr": "paloma..."
             }
           },
           "amount": "1000000"
@@ -110,7 +110,7 @@ __NOTE__: you should increase your token allowance for the pool before providing
         }
       ],
       "auto_stake": false,
-      "receiver": "terra..."
+      "receiver": "paloma..."
     }
   }
 ```
@@ -124,7 +124,7 @@ __NOTE__: you should increase your token allowance for the pool before providing
         {
           "info": {
             "token": {
-              "contract_addr": "terra..."
+              "contract_addr": "paloma..."
             }
           },
           "amount": "1000000"
@@ -140,7 +140,7 @@ __NOTE__: you should increase your token allowance for the pool before providing
       ],
       "slippage_tolerance": "0.01",
       "auto_stake": false,
-      "receiver": "terra..."
+      "receiver": "paloma..."
     }
   }
 ```
@@ -154,7 +154,7 @@ __NOTE__: you should increase your token allowance for the pool before providing
         {
           "info": {
             "token": {
-              "contract_addr": "terra..."
+              "contract_addr": "paloma..."
             }
           },
           "amount": "1000000"
@@ -162,7 +162,7 @@ __NOTE__: you should increase your token allowance for the pool before providing
         {
           "info": {
             "token": {
-              "contract_addr": "terra..."
+              "contract_addr": "paloma..."
             }
           },
           "amount": "0"
@@ -170,7 +170,7 @@ __NOTE__: you should increase your token allowance for the pool before providing
       ],
       "slippage_tolerance": "0",
       "auto_stake": false,
-      "receiver": "terra..."
+      "receiver": "paloma..."
     }
   }
 ```
@@ -204,7 +204,7 @@ NOTE: You should increase your token allowance for the pool before the swap.
       },
       "belief_price": "123",
       "max_spread": "123",
-      "to": "terra..."
+      "to": "paloma..."
     }
   }
 ```
@@ -296,7 +296,7 @@ Reverse simulates a swap (specifies the ask instead of the offer) and returns th
     "ask_asset": {
       "info": {
         "token": {
-          "contract_addr": "terra..."
+          "contract_addr": "paloma..."
         }
       },
       "amount": "1000000"

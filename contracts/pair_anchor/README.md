@@ -19,11 +19,11 @@ Initializes a new x*y=k pair.
 ```json
 {
   "token_code_id": 123,
-  "factory_addr": "terra...",
+  "factory_addr": "paloma...",
   "asset_infos": [
     {
       "token": {
-        "contract_addr": "terra..."
+        "contract_addr": "paloma..."
       }
     },
     {
@@ -39,7 +39,7 @@ Initializes a new x*y=k pair.
 For the custom pool type see:
 
 ```json
-"terra...",
+"paloma...",
 ```
 
 ## ExecuteMsg
@@ -51,7 +51,7 @@ Withdraws liquidity or assets that were swapped to (ask assets in a swap operati
 ```json
 {
   "receive": {
-    "sender": "terra...",
+    "sender": "paloma...",
     "amount": "123",
     "msg": "<base64_encoded_json_string>"
   }
@@ -85,7 +85,7 @@ NOTE: You should increase token allowance before swap.
       },
       "belief_price": "123",
       "max_spread": "123",
-      "to": "terra..."
+      "to": "paloma..."
     }
   }
 ```
@@ -169,7 +169,7 @@ Reverse simulates a swap (specifies the ask instead of the offer) and returns th
     "ask_asset": {
       "info": {
         "token": {
-          "contract_addr": "terra..."
+          "contract_addr": "paloma..."
         }
       },
       "amount": "1000000"

@@ -10,11 +10,11 @@ Initializes the oracle and checks that the target asset pair type is x*y=k.
 
 ```json
 {
-  "factory_contract": "terra...",
+  "factory_contract": "paloma...",
   "asset_infos": [
     {
       "token": {
-        "contract_addr": "terra..."
+        "contract_addr": "paloma..."
       }
     },
     {

@@ -152,7 +152,7 @@ impl WasmMockQuerier {
                             to_binary(&EpochStateResponse {
                                 exchange_rate: Decimal256::from_str("1.216736524026807943")
                                     .unwrap(),
-                                aterra_supply: Uint256::from_str("9253988242307733").unwrap(),
+                                apaloma_supply: Uint256::from_str("9253988242307733").unwrap(),
                             })
                             .into(),
                         ),

@@ -11,9 +11,9 @@ The instantiation message takes in the token code ID for the token type supporte
 ```json
 {
   "token_code_id": 123,
-  "fee_address": "terra...",
-  "owner": "terra...",
-  "generator_address": "terra...",
+  "fee_address": "paloma...",
+  "owner": "paloma...",
+  "generator_address": "paloma...",
   "pair_configs": [{
       "code_id": 123,
       "pair_type": {
@@ -37,8 +37,8 @@ Updates contract variables, namely the code ID of the token implementation used 
 {
   "update_config": {
     "token_code_id": 123,
-    "fee_address": "terra...",
-    "generator_address": "terra..."
+    "fee_address": "paloma...",
+    "generator_address": "paloma..."
   }
 }
 ```
@@ -91,7 +91,7 @@ Custom pool types may also need extra parameters which can be packed in `init_pa
     "asset_infos": [
       {
         "token": {
-          "contract_addr": "terra..."
+          "contract_addr": "paloma..."
         }
       },
       {
@@ -115,7 +115,7 @@ Deregisters an already registered pair. This allows someone else to create a new
     "asset_infos": [
       {
         "token": {
-          "contract_address": "terra..."
+          "contract_address": "paloma..."
         }
       },
       {
@@ -135,7 +135,7 @@ Creates an offer to change the contract ownership. The validity period of the of
 ```json
 {
   "propose_new_owner": {
-    "owner": "terra...",
+    "owner": "paloma...",
     "expires_in": 1234567
   }
 }
@@ -169,7 +169,7 @@ Mark pairs as migrated.
 ```json
   {
     "mark_as_migrated": {
-      "pairs": ["terra...", "terra..."]
+      "pairs": ["paloma...", "paloma..."]
     }
   }
 ```
@@ -198,7 +198,7 @@ Returns information about a specific pair.
     "asset_infos": [
       {
         "token": {
-          "contract_address": "terra..."
+          "contract_address": "paloma..."
         }
       },
       {
@@ -221,7 +221,7 @@ Returns information about multiple pairs (the result is paginated). The function
     "start_after": [
       {
         "token": {
-          "contract_address": "terra..."
+          "contract_address": "paloma..."
         }
       },
       {

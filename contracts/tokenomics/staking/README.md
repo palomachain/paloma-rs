@@ -11,7 +11,7 @@ Initializes the contract with the token code ID used by ASTRO and the ASTRO toke
 ```json
 {
   "token_code_id": 123,
-  "deposit_token_addr": "terra..."
+  "deposit_token_addr": "paloma..."
 }
 ```
 
@@ -24,7 +24,7 @@ CW20 receive msg.
 ```json
 {
   "receive": {
-    "sender": "terra...",
+    "sender": "paloma...",
     "amount": "123",
     "msg": "<base64_encoded_json_string>"
   }
