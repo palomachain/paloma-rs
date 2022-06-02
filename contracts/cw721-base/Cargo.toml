@@ -26,9 +26,9 @@ library = []
 
 [dependencies]
 cw0 = "0.10.3"
-cw2 = "0.13.2"
+cw2 = "0.13.4"
 cw721 = { path = "../../packages/cw721", version = "0.10.1" }
-cw-storage-plus = "0.13.2"
+cw-storage-plus = "0.13.4"
 cosmwasm-std = "1.0.0"
 schemars = "0.8.10"
 serde = { version = "1.0.137", default-features = false, features = ["derive"] }

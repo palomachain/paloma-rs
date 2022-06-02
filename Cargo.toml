@@ -6,7 +6,7 @@ members = [
 #    "contracts/mock-bridge-integration",
 #    "contracts/nft-bridge",
 #    "contracts/token-bridge",
-#    "contracts/wormhole",
+    "contracts/wormhole",
     "packages/cw721",
 ]
 
