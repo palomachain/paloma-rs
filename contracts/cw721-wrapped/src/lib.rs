@@ -73,7 +73,7 @@ pub mod entry {
                         }
                     },
                 )?,
-                bridge: deps.api.addr_canonicalize(&info.sender.as_str())?,
+                bridge: deps.api.addr_canonicalize(info.sender.as_str())?,
             };
         wrapped_asset_info(deps.storage).save(&data)?;
 
