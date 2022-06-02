@@ -6,7 +6,7 @@ use cosmwasm_std::{to_binary, Binary, BlockInfo, Deps, Env, Order, StdError, Std
 use cw0::maybe_addr;
 use cw721::{
     AllNftInfoResponse, ApprovalResponse, ApprovalsResponse, ContractInfoResponse, CustomMsg,
-    Cw721Query, Expiration, NftInfoResponse, NumTokensResponse, OperatorsResponse, OwnerOfResponse,
+    Cw721Query, NftInfoResponse, NumTokensResponse, OperatorsResponse, OwnerOfResponse,
     TokensResponse,
 };
 use cw_storage_plus::Bound;
@@ -65,10 +65,10 @@ where
     ) -> StdResult<OperatorsResponse> {
         let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
         let start_addr = maybe_addr(deps.api, start_after)?;
-        let start = start_addr.map(|addr| Bound::exclusive(addr.as_ref()));
+        let start = start_addr.as_ref().map(Bound::exclusive);
 
         let owner_addr = deps.api.addr_validate(&owner)?;
-        let res: StdResult<Vec<_>> = self
+        let operators = self
             .operators
             .prefix(&owner_addr)
             .range(deps.storage, start, None, Order::Ascending)
@@ -76,9 +76,14 @@ where
                 include_expired || r.is_err() || !r.as_ref().unwrap().1.is_expired(&env.block)
             })
             .take(limit)
-            .map(parse_approval)
-            .collect();
-        Ok(OperatorsResponse { operators: res? })
+            .map(|item| {
+                item.map(|(k, expires)| cw721::Approval {
+                    spender: k.into_string(),
+                    expires,
+                })
+            })
+            .collect::<StdResult<_>>()?;
+        Ok(OperatorsResponse { operators })
     }
 
     fn approval(
@@ -140,20 +145,17 @@ where
         limit: Option<u32>,
     ) -> StdResult<TokensResponse> {
         let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-        let start = start_after.map(Bound::exclusive);
+        let start = start_after.as_deref().map(Bound::exclusive);
 
         let owner_addr = deps.api.addr_validate(&owner)?;
-        let pks: Vec<_> = self
+        let tokens: Vec<_> = self
             .tokens
             .idx
             .owner
-            .prefix(owner_addr)
+            .prefix((owner_addr, vec![]))
             .keys(deps.storage, start, None, Order::Ascending)
             .take(limit)
-            .collect();
-
-        let res: Result<Vec<_>, _> = pks.iter().map(|v| String::from_utf8(v.to_vec())).collect();
-        let tokens = res.map_err(StdError::invalid_utf8)?;
+            .collect::<StdResult<_>>()?;
         Ok(TokensResponse { tokens })
     }
 
@@ -164,15 +166,15 @@ where
         limit: Option<u32>,
     ) -> StdResult<TokensResponse> {
         let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-        let start = start_after.map(Bound::exclusive);
+        let start = start_after.as_deref().map(Bound::exclusive);
 
-        let tokens: StdResult<Vec<String>> = self
+        let tokens: Vec<String> = self
             .tokens
             .range(deps.storage, start, None, Order::Ascending)
             .take(limit)
-            .map(|item| item.map(|(k, _)| String::from_utf8_lossy(&k).to_string()))
-            .collect();
-        Ok(TokensResponse { tokens: tokens? })
+            .map(|item| item.map(|(k, _)| k))
+            .collect::<StdResult<_>>()?;
+        Ok(TokensResponse { tokens })
     }
 
     fn all_nft_info(
@@ -269,14 +271,6 @@ where
             }
         }
     }
-}
-
-type Record<V = Vec<u8>> = (Vec<u8>, V);
-fn parse_approval(item: StdResult<Record<Expiration>>) -> StdResult<cw721::Approval> {
-    item.and_then(|(k, expires)| {
-        let spender = String::from_utf8(k)?;
-        Ok(cw721::Approval { spender, expires })
-    })
 }
 
 fn humanize_approvals<T>(

@@ -25,14 +25,14 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
-cw0 = { version = "0.8.0" }
-cw2 = { version = "0.8.0" }
+cw0 = "0.10.3"
+cw2 = "0.13.2"
 cw721 = { path = "../../packages/cw721", version = "0.10.1" }
-cw-storage-plus = { version = "0.8.0" }
-cosmwasm-std = { version = "0.16.0" }
-schemars = "0.8.6"
-serde = { version = "1.0.130", default-features = false, features = ["derive"] }
-thiserror = { version = "1.0.30" }
+cw-storage-plus = "0.13.2"
+cosmwasm-std = "1.0.0"
+schemars = "0.8.10"
+serde = { version = "1.0.137", default-features = false, features = ["derive"] }
+thiserror = "1.0.31"
 
 [dev-dependencies]
-cosmwasm-schema = { version = "1.0.0-beta2" }
+cosmwasm-schema = "1.0.0"
