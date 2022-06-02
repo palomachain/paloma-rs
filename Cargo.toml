@@ -4,7 +4,7 @@ members = [
     "contracts/cw721-base",
     "contracts/cw721-wrapped",
 #    "contracts/mock-bridge-integration",
-#    "contracts/nft-bridge",
+    "contracts/nft-bridge",
 #    "contracts/token-bridge",
     "contracts/wormhole",
     "packages/cw721",

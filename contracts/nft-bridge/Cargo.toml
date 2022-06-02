@@ -13,17 +13,17 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
-cosmwasm-std = { version = "0.16.0" }
-cosmwasm-storage = { version = "0.16.0" }
-schemars = "0.8.1"
-serde = { version = "1.0.103", default-features = false, features = ["derive"] }
-cw721-wrapped = { path = "../cw721-wrapped", features = ["library"] }
-cw721-base = { path = "../../contracts/cw721-base", version = "0.10.0", features = ["library"] }
-cw721 = { path = "../../packages/cw721" }
-wormhole-bridge-terra = { path = "../wormhole", features = ["library"] }
-sha3 = { version = "0.9.1", default-features = false }
-hex = "0.4.2"
 bigint = "4"
+cosmwasm-std = "1.0.0"
+cosmwasm-storage = { version = "1.0.0" }
+cw721 = { path = "../../packages/cw721" }
+cw721-base = { path = "../../contracts/cw721-base", version = "0.10.0", features = ["library"] }
+cw721-wrapped = { path = "../cw721-wrapped", features = ["library"] }
+hex = "0.4.2"
+schemars = "0.8.10"
+serde = { version = "1.0.137", default-features = false, features = ["derive"] }
+sha3 = { version = "0.9.1", default-features = false }
+wormhole-bridge-terra = { path = "../wormhole", features = ["library"] }
 
 [dev-dependencies]
 serde_json = "1.0"

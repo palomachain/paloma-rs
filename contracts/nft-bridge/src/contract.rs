@@ -361,12 +361,12 @@ fn handle_initiate_transfer(
             funds: vec![],
         }));
 
-        let wrapped_token_info: cw721_wrapped::msg::WrappedAssetInfoResponse = deps
-            .querier
-            .custom_query(&QueryRequest::<Empty>::Wasm(WasmQuery::Smart {
-                contract_addr: asset.clone(),
-                msg: to_binary(&cw721_wrapped::msg::QueryMsg::WrappedAssetInfo {})?,
-            }))?;
+        let wrapped_token_info: cw721_wrapped::msg::WrappedAssetInfoResponse =
+            deps.querier
+                .query(&QueryRequest::<Empty>::Wasm(WasmQuery::Smart {
+                    contract_addr: asset.clone(),
+                    msg: to_binary(&cw721_wrapped::msg::QueryMsg::WrappedAssetInfo {})?,
+                }))?;
 
         asset_address = wrapped_token_info.asset_address.to_array()?;
         asset_chain = wrapped_token_info.asset_chain;
@@ -401,7 +401,7 @@ fn handle_initiate_transfer(
     } else {
         let response: cw721::ContractInfoResponse =
             deps.querier
-                .custom_query(&QueryRequest::<Empty>::Wasm(WasmQuery::Smart {
+                .query(&QueryRequest::<Empty>::Wasm(WasmQuery::Smart {
                     contract_addr: asset.clone(),
                     msg: to_binary(&cw721_base::msg::QueryMsg::ContractInfo {})?,
                 }))?;
@@ -411,7 +411,7 @@ fn handle_initiate_transfer(
 
     let cw721::NftInfoResponse::<Option<Empty>> { token_uri, .. } =
         deps.querier
-            .custom_query(&QueryRequest::<Empty>::Wasm(WasmQuery::Smart {
+            .query(&QueryRequest::<Empty>::Wasm(WasmQuery::Smart {
                 contract_addr: asset,
                 msg: to_binary(&cw721_base::msg::QueryMsg::NftInfo {
                     token_id: token_id.clone(),
