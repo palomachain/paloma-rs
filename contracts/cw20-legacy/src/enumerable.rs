@@ -30,8 +30,8 @@ pub fn query_all_allowances(
 ) -> StdResult<AllAllowancesResponse> {
     let owner_addr = deps.api.addr_canonicalize(&owner)?;
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start =
-        calc_range_start_human(deps.api, start_after.map(Addr::unchecked))?.map(Bound::exclusive);
+    let start = calc_range_start_human(deps.api, start_after.map(Addr::unchecked))?;
+    let start = start.as_deref().map(Bound::exclusive);
 
     let allowances: StdResult<Vec<AllowanceInfo>> = ALLOWANCES
         .prefix(owner_addr.as_slice())
@@ -57,8 +57,8 @@ pub fn query_all_accounts(
     limit: Option<u32>,
 ) -> StdResult<AllAccountsResponse> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start =
-        calc_range_start_human(deps.api, start_after.map(Addr::unchecked))?.map(Bound::exclusive);
+    let start = calc_range_start_human(deps.api, start_after.map(Addr::unchecked))?;
+    let start = start.as_deref().map(Bound::exclusive);
 
     let accounts: Result<Vec<_>, _> = BALANCES
         .keys(deps.storage, start, None, Order::Ascending)

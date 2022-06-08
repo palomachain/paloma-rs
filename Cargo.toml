@@ -1,6 +1,7 @@
 [workspace]
 members = [
-#    "contracts/cw20-wrapped",
+    "contracts/cw20-legacy",
+    "contracts/cw20-wrapped",
     "contracts/cw721-base",
     "contracts/cw721-wrapped",
 #    "contracts/mock-bridge-integration",

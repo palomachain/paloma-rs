@@ -101,8 +101,8 @@ pub fn deduct_allowance(
     ALLOWANCES.update(
         storage,
         (
-            api.addr_canonicalize(&owner.to_string())?.as_slice(),
-            api.addr_canonicalize(&spender.to_string())?.as_slice(),
+            api.addr_canonicalize(owner.as_str())?.as_slice(),
+            api.addr_canonicalize(spender.as_str())?.as_slice(),
         ),
         |current| {
             match current {

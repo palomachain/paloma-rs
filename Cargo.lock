@@ -267,6 +267,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw20-legacy"
+version = "0.2.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus",
+ "cw-utils",
+ "cw2",
+ "cw20",
+ "cw20-base",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "cw20-wrapped"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus",
+ "cw2",
+ "cw20",
+ "cw20-legacy",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "cw721"
 version = "0.10.1"
 dependencies = [
