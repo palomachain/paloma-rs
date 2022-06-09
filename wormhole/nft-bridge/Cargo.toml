@@ -16,7 +16,7 @@ library = []
 cosmwasm-std = "1.0.0"
 cosmwasm-storage = { version = "1.0.0" }
 cw721 = { path = "../../packages/cw721" }
-cw721-base = { path = "../../contracts/cw721-base", version = "0.10.0", features = ["library"] }
+cw721-base = { path = "../cw721-base", version = "0.10.0", features = ["library"] }
 cw721-wrapped = { path = "../cw721-wrapped", features = ["library"] }
 hex = "0.4.2"
 schemars = "0.8.10"
