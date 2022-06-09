@@ -1,0 +1,25 @@
+[package]
+name = "cw20-wrapped"
+version = "0.1.0"
+authors = ["Yuriy Savchenko <yuriy.savchenko@gmail.com>"]
+edition = "2018"
+description = "Wrapped CW20 token contract"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+backtraces = ["cosmwasm-std/backtraces"]
+# use library feature to disable all init/handle/query exports
+library = []
+
+[dependencies]
+cosmwasm-std = "1.0.0"
+cosmwasm-storage = "1.0.0"
+cw-storage-plus  = "0.13.4"
+cw2 = "0.13.4"
+cw20 = "0.13.4"
+cw20-legacy = { path = "../cw20-legacy" }
+schemars = "0.8.10"
+serde = { version = "1.0.137", default-features = false, features = ["derive"] }
+thiserror = "1.0.31"

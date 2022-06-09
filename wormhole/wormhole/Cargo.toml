@@ -1,0 +1,33 @@
+[package]
+name = "wormhole-bridge-terra"
+version = "0.1.0"
+authors = ["Yuriy Savchenko <yuriy.savchenko@gmail.com>"]
+edition = "2018"
+description = "Wormhole contract"
+
+[lib]
+name = "wormhole"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+backtraces = ["cosmwasm-std/backtraces"]
+# use library feature to disable all init/handle/query exports
+library = []
+
+[dependencies]
+cosmwasm-std = "1.0.0"
+cosmwasm-storage = "1.0.0"
+cw20 = "0.13.4"
+cw20-base = { version = "0.13.4", features = ["library"] }
+generic-array = { version = "0.14.4" }
+getrandom = { version = "0.2", features = ["custom"] }
+hex = "0.4.2"
+k256 = { version = "0.9.4", default-features = false, features = ["ecdsa"] }
+lazy_static = "1.4.0"
+schemars = "0.8.10"
+serde = { version = "1.0.137", default-features = false, features = ["derive"] }
+sha3 = { version = "0.9.1", default-features = false }
+thiserror = "1.0.31"
+
+[dev-dependencies]
+serde_json = "1.0"
