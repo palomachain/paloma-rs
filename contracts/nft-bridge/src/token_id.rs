@@ -1,6 +1,6 @@
-use bigint::U256;
-use cosmwasm_std::{StdError, StdResult, Storage};
+use std::str::FromStr;
 
+use cosmwasm_std::{StdResult, Storage, Uint256};
 use sha3::digest::consts::U32;
 use sha3::digest::generic_array::GenericArray;
 use sha3::{Digest, Keccak256};
@@ -52,7 +52,7 @@ pub fn from_external_token_id(
     if nft_chain == CHAIN_ID {
         token_id_hashes_read(storage, nft_chain, *nft_address).load(token_id_external)
     } else {
-        Ok(format!("{}", U256::from_big_endian(token_id_external)))
+        Ok(format!("{}", Uint256::from_be_bytes(*token_id_external)))
     }
 }
 
@@ -73,15 +73,6 @@ pub fn to_external_token_id(
         token_id_hashes(storage, nft_chain, *nft_address).save(&hash, &token_id_internal)?;
         Ok(hash.as_slice().get_const_bytes(0))
     } else {
-        let mut bytes = [0; 32];
-        U256::from_dec_str(&token_id_internal)
-            .map_err(|_| {
-                StdError::generic_err(format!(
-                    "{} could not be parsed as a decimal number",
-                    token_id_internal
-                ))
-            })?
-            .to_big_endian(&mut bytes);
-        Ok(bytes)
+        Ok(Uint256::from_str(&token_id_internal)?.to_be_bytes())
     }
 }

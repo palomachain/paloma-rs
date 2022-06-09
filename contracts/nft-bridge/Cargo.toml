@@ -13,7 +13,6 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
-bigint = "4"
 cosmwasm-std = "1.0.0"
 cosmwasm-storage = { version = "1.0.0" }
 cw721 = { path = "../../packages/cw721" }
