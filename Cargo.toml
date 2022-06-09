@@ -2,7 +2,6 @@
 resolver = "2"
 members = [
 #    "contracts/mock-bridge-integration",
-#    "contracts/token-bridge",
     "contracts/factory",
     "contracts/oracle",
     "contracts/pair",
@@ -22,6 +21,7 @@ members = [
     "wormhole/cw721-base",
     "wormhole/cw721-wrapped",
     "wormhole/nft-bridge",
+    "wormhole/token-bridge",
     "wormhole/wormhole",
 ]
 

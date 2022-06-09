@@ -1,3 +1,4 @@
+use astroport::asset::{Asset, AssetInfo};
 use cw20::{BalanceResponse, TokenInfoResponse};
 use cw20_base::msg::{ExecuteMsg as TokenMsg, QueryMsg as TokenQuery};
 use cw20_wrapped::msg::{
@@ -7,7 +8,6 @@ use cw20_wrapped::msg::{
 use sha3::{Digest, Keccak256};
 use std::cmp::{max, min};
 use std::str::FromStr;
-use terraswap::asset::{Asset, AssetInfo};
 
 use wormhole::byte_utils::{
     extend_address_to_32, extend_string_to_32, get_string_from_32, ByteUtils,
@@ -19,10 +19,11 @@ use wormhole::state::{vaa_archive_add, vaa_archive_check, GovernancePacket, Pars
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coin, to_binary, BankMsg, Binary, CanonicalAddr, Coin, CosmosMsg, Deps, DepsMut, Empty, Env,
+    coin, to_binary, Addr, BankMsg, Binary, CanonicalAddr, Coin, CosmosMsg, Deps, DepsMut, Env,
     MessageInfo, QueryRequest, Reply, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
     WasmQuery,
 };
+use paloma_cosmwasm::PalomaQueryWrapper;
 
 use crate::msg::{
     ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, TransferInfoResponse, WrappedRegistryResponse,
@@ -156,21 +157,27 @@ pub fn reply(deps: DepsMut, env: Env, _msg: Reply) -> StdResult<Response> {
         .add_attribute("action", "reply_handler"))
 }
 
-pub fn coins_after_tax(deps: DepsMut, coins: Vec<Coin>) -> StdResult<Vec<Coin>> {
-    let mut res = vec![];
-    for coin in coins {
-        let asset = Asset {
-            amount: coin.amount,
-            info: AssetInfo::NativeToken {
-                denom: coin.denom.clone(),
-            },
-        };
-        res.push(asset.deduct_tax(&deps.querier)?);
-    }
-    Ok(res)
+pub fn coins_after_tax(
+    deps: DepsMut<PalomaQueryWrapper>,
+    coins: Vec<Coin>,
+) -> StdResult<Vec<Coin>> {
+    coins
+        .into_iter()
+        .map(|coin| {
+            let asset = Asset {
+                amount: coin.amount,
+                info: AssetInfo::NativeToken { denom: coin.denom },
+            };
+            asset.deduct_tax(&deps.querier)
+        })
+        .collect()
 }
 
-fn parse_vaa(deps: Deps, block_time: u64, data: &Binary) -> StdResult<ParsedVAA> {
+fn parse_vaa(
+    deps: Deps<PalomaQueryWrapper>,
+    block_time: u64,
+    data: &Binary,
+) -> StdResult<ParsedVAA> {
     let cfg = config_read(deps.storage).load()?;
     let vaa: ParsedVAA = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: cfg.wormhole_contract,
@@ -183,7 +190,12 @@ fn parse_vaa(deps: Deps, block_time: u64, data: &Binary) -> StdResult<ParsedVAA>
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
+pub fn execute(
+    deps: DepsMut<PalomaQueryWrapper>,
+    env: Env,
+    info: MessageInfo,
+    msg: ExecuteMsg,
+) -> StdResult<Response> {
     match msg {
         ExecuteMsg::RegisterAssetHook { asset_id } => {
             handle_register_asset(deps, env, info, &asset_id)
@@ -237,7 +249,11 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     }
 }
 
-fn deposit_tokens(deps: DepsMut, _env: Env, info: MessageInfo) -> StdResult<Response> {
+fn deposit_tokens(
+    deps: DepsMut<PalomaQueryWrapper>,
+    _env: Env,
+    info: MessageInfo,
+) -> StdResult<Response> {
     for coin in info.funds {
         let deposit_key = format!("{}:{}", info.sender, coin.denom);
         bridge_deposit(deps.storage).update(
@@ -252,7 +268,7 @@ fn deposit_tokens(deps: DepsMut, _env: Env, info: MessageInfo) -> StdResult<Resp
 }
 
 fn withdraw_tokens(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     _env: Env,
     info: MessageInfo,
     data: AssetInfo,
@@ -284,7 +300,7 @@ fn withdraw_tokens(
 
 /// Handle wrapped asset registration messages
 fn handle_register_asset(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     _env: Env,
     info: MessageInfo,
     asset_id: &[u8],
@@ -308,7 +324,7 @@ fn handle_register_asset(
 }
 
 fn handle_attest_meta(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     emitter_chain: u16,
     emitter_address: Vec<u8>,
@@ -379,7 +395,7 @@ fn handle_attest_meta(
 }
 
 fn handle_create_asset_meta(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
     asset_info: AssetInfo,
@@ -387,7 +403,7 @@ fn handle_create_asset_meta(
 ) -> StdResult<Response> {
     match asset_info {
         AssetInfo::Token { contract_addr } => {
-            handle_create_asset_meta_token(deps, env, info, contract_addr, nonce)
+            handle_create_asset_meta_token(deps, env, info, &contract_addr, nonce)
         }
         AssetInfo::NativeToken { ref denom } => {
             handle_create_asset_meta_native_token(deps, env, info, denom.clone(), nonce)
@@ -396,20 +412,20 @@ fn handle_create_asset_meta(
 }
 
 fn handle_create_asset_meta_token(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
-    asset_address: HumanAddr,
+    asset_address: &Addr,
     nonce: u32,
 ) -> StdResult<Response> {
     let cfg = config_read(deps.storage).load()?;
 
     let request = QueryRequest::Wasm(WasmQuery::Smart {
-        contract_addr: asset_address.clone(),
+        contract_addr: asset_address.to_string(),
         msg: to_binary(&TokenQuery::TokenInfo {})?,
     });
 
-    let asset_canonical = deps.api.addr_canonicalize(&asset_address)?;
+    let asset_canonical = deps.api.addr_canonicalize(asset_address.as_str())?;
     let token_info: TokenInfoResponse = deps.querier.query(&request)?;
 
     let meta: AssetMeta = AssetMeta {
@@ -442,7 +458,7 @@ fn handle_create_asset_meta_token(
 }
 
 fn handle_create_asset_meta_native_token(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
     denom: String,
@@ -481,7 +497,7 @@ fn handle_create_asset_meta_native_token(
 }
 
 fn handle_complete_transfer_with_payload(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
     data: &Binary,
@@ -519,7 +535,12 @@ fn handle_complete_transfer_with_payload(
     }
 }
 
-fn submit_vaa(deps: DepsMut, env: Env, info: MessageInfo, data: &Binary) -> StdResult<Response> {
+fn submit_vaa(
+    deps: DepsMut<PalomaQueryWrapper>,
+    env: Env,
+    info: MessageInfo,
+    data: &Binary,
+) -> StdResult<Response> {
     let state = config_read(deps.storage).load()?;
 
     let vaa = parse_vaa(deps.as_ref(), env.block.time.seconds(), data)?;
@@ -563,7 +584,11 @@ fn submit_vaa(deps: DepsMut, env: Env, info: MessageInfo, data: &Binary) -> StdR
     }
 }
 
-fn handle_governance_payload(deps: DepsMut, env: Env, data: &[u8]) -> StdResult<Response> {
+fn handle_governance_payload(
+    deps: DepsMut<PalomaQueryWrapper>,
+    env: Env,
+    data: &[u8],
+) -> StdResult<Response> {
     let gov_packet = GovernancePacket::deserialize(data)?;
     let module = get_string_from_32(&gov_packet.module);
 
@@ -584,7 +609,11 @@ fn handle_governance_payload(deps: DepsMut, env: Env, data: &[u8]) -> StdResult<
     }
 }
 
-fn handle_upgrade_contract(_deps: DepsMut, env: Env, data: &Vec<u8>) -> StdResult<Response> {
+fn handle_upgrade_contract(
+    _deps: DepsMut<PalomaQueryWrapper>,
+    env: Env,
+    data: &Vec<u8>,
+) -> StdResult<Response> {
     let UpgradeContract { new_contract } = UpgradeContract::deserialize(data)?;
 
     Ok(Response::new()
@@ -596,7 +625,11 @@ fn handle_upgrade_contract(_deps: DepsMut, env: Env, data: &Vec<u8>) -> StdResul
         .add_attribute("action", "contract_upgrade"))
 }
 
-fn handle_register_chain(deps: DepsMut, _env: Env, data: &Vec<u8>) -> StdResult<Response> {
+fn handle_register_chain(
+    deps: DepsMut<PalomaQueryWrapper>,
+    _env: Env,
+    data: &Vec<u8>,
+) -> StdResult<Response> {
     let RegisterChain {
         chain_id,
         chain_address,
@@ -619,7 +652,7 @@ fn handle_register_chain(deps: DepsMut, _env: Env, data: &Vec<u8>) -> StdResult<
 
 #[allow(clippy::too_many_arguments)]
 fn handle_complete_transfer(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
     emitter_chain: u16,
@@ -655,7 +688,7 @@ fn handle_complete_transfer(
 
 #[allow(clippy::too_many_arguments)]
 fn handle_complete_transfer_token(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     _env: Env,
     info: MessageInfo,
     emitter_chain: u16,
@@ -801,7 +834,7 @@ fn handle_complete_transfer_token(
 
 #[allow(clippy::too_many_arguments)]
 fn handle_complete_transfer_token_native(
-    mut deps: DepsMut,
+    mut deps: DepsMut<PalomaQueryWrapper>,
     _env: Env,
     info: MessageInfo,
     emitter_chain: u16,
@@ -890,7 +923,7 @@ fn handle_complete_transfer_token_native(
 
 #[allow(clippy::too_many_arguments)]
 fn handle_initiate_transfer(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
     asset: Asset,
@@ -905,7 +938,7 @@ fn handle_initiate_transfer(
             deps,
             env,
             info,
-            contract_addr,
+            &contract_addr,
             asset.amount,
             recipient_chain,
             recipient,
@@ -930,10 +963,10 @@ fn handle_initiate_transfer(
 
 #[allow(clippy::too_many_arguments)]
 fn handle_initiate_transfer_token(
-    mut deps: DepsMut,
+    mut deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
-    asset: HumanAddr,
+    asset: &Addr,
     mut amount: Uint128,
     recipient_chain: u16,
     recipient: Vec<u8>,
@@ -952,7 +985,7 @@ fn handle_initiate_transfer_token(
     let asset_address: Vec<u8>;
 
     let cfg: ConfigInfo = config_read(deps.storage).load()?;
-    let asset_canonical: CanonicalAddr = deps.api.addr_canonicalize(&asset)?;
+    let asset_canonical: CanonicalAddr = deps.api.addr_canonicalize(asset.as_str())?;
 
     let mut messages: Vec<CosmosMsg> = vec![];
     let mut submessages: Vec<SubMsg> = vec![];
@@ -966,19 +999,18 @@ fn handle_initiate_transfer_token(
 
             // This is a deployed wrapped asset, burn it
             messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: asset.clone(),
+                contract_addr: asset.to_string(),
                 msg: to_binary(&WrappedMsg::Burn {
                     account: info.sender.to_string(),
                     amount,
                 })?,
                 funds: vec![],
             }));
-            let request = QueryRequest::<Empty>::Wasm(WasmQuery::Smart {
-                contract_addr: asset,
+            let request = QueryRequest::<PalomaQueryWrapper>::Wasm(WasmQuery::Smart {
+                contract_addr: asset.to_string(),
                 msg: to_binary(&WrappedQuery::WrappedAssetInfo {})?,
             });
-            let wrapped_token_info: WrappedAssetInfoResponse =
-                deps.querier.custom_query(&request)?;
+            let wrapped_token_info: WrappedAssetInfoResponse = deps.querier.query(&request)?;
             asset_chain = wrapped_token_info.asset_chain;
             asset_address = wrapped_token_info.asset_address.into();
 
@@ -1020,7 +1052,7 @@ fn handle_initiate_transfer_token(
             // normalize amount to 8 decimals when it sent over the wormhole
             let token_info: TokenInfoResponse =
                 deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-                    contract_addr: asset.clone(),
+                    contract_addr: asset.to_string(),
                     msg: to_binary(&TokenQuery::TokenInfo {})?,
                 }))?;
 
@@ -1044,7 +1076,7 @@ fn handle_initiate_transfer_token(
             // This is a regular asset, transfer its balance
             submessages.push(SubMsg::reply_on_success(
                 CosmosMsg::Wasm(WasmMsg::Execute {
-                    contract_addr: asset.clone(),
+                    contract_addr: asset.to_string(),
                     msg: to_binary(&TokenMsg::TransferFrom {
                         owner: info.sender.to_string(),
                         recipient: env.contract.address.to_string(),
@@ -1109,7 +1141,7 @@ fn handle_initiate_transfer_token(
             wrapped_transfer_tmp(deps.storage).save(&TransferState {
                 previous_balance: balance.balance.to_string(),
                 account: info.sender.to_string(),
-                token_address: asset,
+                token_address: asset.to_string(),
                 token_canonical: asset_canonical.clone(),
                 message: token_bridge_message.serialize(),
                 multiplier: Uint128::new(multiplier).to_string(),
@@ -1148,7 +1180,7 @@ fn format_native_denom_symbol(denom: &str) -> String {
 
 #[allow(clippy::too_many_arguments)]
 fn handle_initiate_transfer_native_token(
-    deps: DepsMut,
+    deps: DepsMut<PalomaQueryWrapper>,
     env: Env,
     info: MessageInfo,
     denom: String,
@@ -1239,7 +1271,7 @@ fn handle_initiate_transfer_native_token(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps<PalomaQueryWrapper>, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::WrappedRegistry { chain, address } => {
             to_binary(&query_wrapped_registry(deps, chain, address.as_slice())?)
@@ -1249,7 +1281,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 pub fn query_wrapped_registry(
-    deps: Deps,
+    deps: Deps<PalomaQueryWrapper>,
     chain: u16,
     address: &[u8],
 ) -> StdResult<WrappedRegistryResponse> {
@@ -1261,7 +1293,11 @@ pub fn query_wrapped_registry(
     }
 }
 
-fn query_transfer_info(deps: Deps, env: Env, vaa: &Binary) -> StdResult<TransferInfoResponse> {
+fn query_transfer_info(
+    deps: Deps<PalomaQueryWrapper>,
+    env: Env,
+    vaa: &Binary,
+) -> StdResult<TransferInfoResponse> {
     let cfg = config_read(deps.storage).load()?;
 
     let parsed = parse_vaa(deps, env.block.time.seconds(), vaa)?;
