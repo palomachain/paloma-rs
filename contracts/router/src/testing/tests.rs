@@ -421,7 +421,7 @@ fn execute_swap_operation() {
     };
     let env = mock_env();
     let info = mock_info(MOCK_CONTRACT_ADDR, &[]);
-    let res = execute(deps.as_mut(), env, info, msg.clone()).unwrap();
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(
         res.messages,
         vec![SubMsg {
@@ -614,7 +614,7 @@ fn assert_minimum_receive_native_token() {
         minimum_receive: Uint128::from(1000001u128),
         receiver: String::from("addr0000"),
     };
-    let res = execute(deps.as_mut(), env.clone(), info, msg).unwrap_err();
+    let res = execute(deps.as_mut(), env, info, msg).unwrap_err();
     assert_eq!(
         res,
         ContractError::AssertionMinimumReceive {
@@ -655,7 +655,7 @@ fn assert_minimum_receive_token() {
         minimum_receive: Uint128::from(1000001u128),
         receiver: String::from("addr0000"),
     };
-    let res = execute(deps.as_mut(), env.clone(), info, msg).unwrap_err();
+    let res = execute(deps.as_mut(), env, info, msg).unwrap_err();
     assert_eq!(
         res,
         ContractError::AssertionMinimumReceive {

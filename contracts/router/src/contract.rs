@@ -518,114 +518,105 @@ fn test_invalid_operations() {
     use cosmwasm_std::testing::mock_dependencies;
     let deps = mock_dependencies();
     // Empty error
-    assert_eq!(true, assert_operations(deps.as_ref().api, &vec![]).is_err());
+    assert!(assert_operations(deps.as_ref().api, &[]).is_err());
 
     // uluna output
-    assert_eq!(
-        true,
-        assert_operations(
-            deps.as_ref().api,
-            &vec![
-                SwapOperation::NativeSwap {
-                    offer_denom: "uusd".to_string(),
-                    ask_denom: "uluna".to_string(),
+    assert!(assert_operations(
+        deps.as_ref().api,
+        &vec![
+            SwapOperation::NativeSwap {
+                offer_denom: "uusd".to_string(),
+                ask_denom: "uluna".to_string(),
+            },
+            SwapOperation::AstroSwap {
+                offer_asset_info: AssetInfo::NativeToken {
+                    denom: "ukrw".to_string(),
                 },
-                SwapOperation::AstroSwap {
-                    offer_asset_info: AssetInfo::NativeToken {
-                        denom: "ukrw".to_string(),
-                    },
-                    ask_asset_info: AssetInfo::Token {
-                        contract_addr: Addr::unchecked("asset0001"),
-                    },
+                ask_asset_info: AssetInfo::Token {
+                    contract_addr: Addr::unchecked("asset0001"),
                 },
-                SwapOperation::AstroSwap {
-                    offer_asset_info: AssetInfo::Token {
-                        contract_addr: Addr::unchecked("asset0001"),
-                    },
-                    ask_asset_info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
-                }
-            ]
-        )
-        .is_ok()
-    );
+            },
+            SwapOperation::AstroSwap {
+                offer_asset_info: AssetInfo::Token {
+                    contract_addr: Addr::unchecked("asset0001"),
+                },
+                ask_asset_info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
+                },
+            }
+        ]
+    )
+    .is_ok());
 
     // asset0002 output
-    assert_eq!(
-        true,
-        assert_operations(
-            deps.as_ref().api,
-            &vec![
-                SwapOperation::NativeSwap {
-                    offer_denom: "uusd".to_string(),
-                    ask_denom: "uluna".to_string(),
+    assert!(assert_operations(
+        deps.as_ref().api,
+        &vec![
+            SwapOperation::NativeSwap {
+                offer_denom: "uusd".to_string(),
+                ask_denom: "uluna".to_string(),
+            },
+            SwapOperation::AstroSwap {
+                offer_asset_info: AssetInfo::NativeToken {
+                    denom: "ukrw".to_string(),
                 },
-                SwapOperation::AstroSwap {
-                    offer_asset_info: AssetInfo::NativeToken {
-                        denom: "ukrw".to_string(),
-                    },
-                    ask_asset_info: AssetInfo::Token {
-                        contract_addr: Addr::unchecked("asset0001"),
-                    },
+                ask_asset_info: AssetInfo::Token {
+                    contract_addr: Addr::unchecked("asset0001"),
                 },
-                SwapOperation::AstroSwap {
-                    offer_asset_info: AssetInfo::Token {
-                        contract_addr: Addr::unchecked("asset0001"),
-                    },
-                    ask_asset_info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
+            },
+            SwapOperation::AstroSwap {
+                offer_asset_info: AssetInfo::Token {
+                    contract_addr: Addr::unchecked("asset0001"),
                 },
-                SwapOperation::AstroSwap {
-                    offer_asset_info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
-                    ask_asset_info: AssetInfo::Token {
-                        contract_addr: Addr::unchecked("asset0002"),
-                    },
+                ask_asset_info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
                 },
-            ]
-        )
-        .is_ok()
-    );
+            },
+            SwapOperation::AstroSwap {
+                offer_asset_info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
+                },
+                ask_asset_info: AssetInfo::Token {
+                    contract_addr: Addr::unchecked("asset0002"),
+                },
+            },
+        ]
+    )
+    .is_ok());
 
     // Multiple output token type errors
-    assert_eq!(
-        true,
-        assert_operations(
-            deps.as_ref().api,
-            &vec![
-                SwapOperation::NativeSwap {
-                    offer_denom: "uusd".to_string(),
-                    ask_denom: "ukrw".to_string(),
+    assert!(assert_operations(
+        deps.as_ref().api,
+        &vec![
+            SwapOperation::NativeSwap {
+                offer_denom: "uusd".to_string(),
+                ask_denom: "ukrw".to_string(),
+            },
+            SwapOperation::AstroSwap {
+                offer_asset_info: AssetInfo::NativeToken {
+                    denom: "ukrw".to_string(),
                 },
-                SwapOperation::AstroSwap {
-                    offer_asset_info: AssetInfo::NativeToken {
-                        denom: "ukrw".to_string(),
-                    },
-                    ask_asset_info: AssetInfo::Token {
-                        contract_addr: Addr::unchecked("asset0001"),
-                    },
+                ask_asset_info: AssetInfo::Token {
+                    contract_addr: Addr::unchecked("asset0001"),
                 },
-                SwapOperation::AstroSwap {
-                    offer_asset_info: AssetInfo::Token {
-                        contract_addr: Addr::unchecked("asset0001"),
-                    },
-                    ask_asset_info: AssetInfo::NativeToken {
-                        denom: "uaud".to_string(),
-                    },
+            },
+            SwapOperation::AstroSwap {
+                offer_asset_info: AssetInfo::Token {
+                    contract_addr: Addr::unchecked("asset0001"),
                 },
-                SwapOperation::AstroSwap {
-                    offer_asset_info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
-                    ask_asset_info: AssetInfo::Token {
-                        contract_addr: Addr::unchecked("asset0002"),
-                    },
+                ask_asset_info: AssetInfo::NativeToken {
+                    denom: "uaud".to_string(),
                 },
-            ]
-        )
-        .is_err()
-    );
+            },
+            SwapOperation::AstroSwap {
+                offer_asset_info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
+                },
+                ask_asset_info: AssetInfo::Token {
+                    contract_addr: Addr::unchecked("asset0002"),
+                },
+            },
+        ]
+    )
+    .is_err());
 }

@@ -22,7 +22,7 @@ const MOCK_ANCHOR_ADDR: &str = "anchor";
 const MOCK_ANCHOR_TOKEN: &str = "addr1aust";
 
 fn create_init_params() -> Option<Binary> {
-    return Some(to_binary(&MOCK_ANCHOR_ADDR.to_string()).unwrap());
+    Some(to_binary(&MOCK_ANCHOR_ADDR.to_string()).unwrap())
 }
 
 #[test]
@@ -38,9 +38,8 @@ fn proper_initialization() {
 
     let sender = "addr0000";
     // We can just call .unwrap() to assert this was a success
-    let env = mock_env();
     let info = mock_info(sender, &[]);
-    let res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+    let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
     assert_eq!(res.messages.len(), 0);
 
     // It worked, let's query the state
@@ -73,15 +72,14 @@ fn update_config() {
 
     let msg = get_instantiate_message();
 
-    let env = mock_env();
     let info = mock_info("addr0000", &[]);
     // We can just call .unwrap() to assert this was a success
-    instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+    instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
     // We can not update config for a virtual pool
     let res = execute(
         deps.as_mut(),
-        env,
+        mock_env(),
         info,
         ExecuteMsg::UpdateConfig {
             params: Default::default(),
@@ -105,10 +103,9 @@ fn provide_liquidity() {
 
     let msg = get_instantiate_message();
 
-    let env = mock_env();
     let info = mock_info("addr0000", &[]);
     // We can just call .unwrap() to assert this was a success
-    instantiate(deps.as_mut(), env, info, msg).unwrap();
+    instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
     // We can not provide liquidity for a virtual pool
     let msg = ExecuteMsg::ProvideLiquidity {
@@ -131,7 +128,6 @@ fn provide_liquidity() {
         receiver: None,
     };
 
-    let env = mock_env();
     let info = mock_info(
         "addr0000",
         &[Coin {
@@ -139,7 +135,7 @@ fn provide_liquidity() {
             amount: Uint128::from(100_000000000000000000u128),
         }],
     );
-    let res = execute(deps.as_mut(), env.clone().clone(), info, msg);
+    let res = execute(deps.as_mut(), mock_env(), info, msg);
 
     assert_eq!(res, Err(ContractError::NonSupported {}))
 }
@@ -162,10 +158,9 @@ fn withdraw_liquidity() {
 
     let msg = get_instantiate_message();
 
-    let env = mock_env();
     let info = mock_info("addr0000", &[]);
     // We can just call .unwrap() to assert this was a success
-    instantiate(deps.as_mut(), env, info, msg).unwrap();
+    instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
     // Withdraw liquidity
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
@@ -174,9 +169,8 @@ fn withdraw_liquidity() {
         amount: Uint128::new(100u128),
     });
 
-    let env = mock_env();
     let info = mock_info("liquidity0000", &[]);
-    let res = execute(deps.as_mut(), env, info, msg);
+    let res = execute(deps.as_mut(), mock_env(), info, msg);
 
     assert_eq!(res, Err(ContractError::NonSupported {}))
 }
@@ -206,7 +200,7 @@ fn try_native_to_token() {
 
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
-    let info_contract = mock_info(env.contract.address.clone().as_str(), &[]);
+    let info_contract = mock_info(env.contract.address.as_str(), &[]);
     // we can just call .unwrap() to assert this was a success
     instantiate(deps.as_mut(), env, info, msg).unwrap();
 
@@ -283,24 +277,21 @@ fn try_native_to_token() {
     )
     .unwrap();
 
-    assert_eq!(
+    assert!(
         (offer_amount.u128() as i128 - reverse_simulation_res.offer_amount.u128() as i128).abs()
-            < 5i128,
-        true
+            < 5i128
     );
-    assert_eq!(
+    assert!(
         (expected_commission_amount.u128() as i128
             - reverse_simulation_res.commission_amount.u128() as i128)
             .abs()
-            < 5i128,
-        true
+            < 5i128
     );
-    assert_eq!(
+    assert!(
         (expected_spread_amount.u128() as i128
             - reverse_simulation_res.spread_amount.u128() as i128)
             .abs()
-            < 5i128,
-        true
+            < 5i128
     );
 
     let first_msg = res.messages.get(0).unwrap();
@@ -364,7 +355,7 @@ fn try_native_to_token() {
         &[(&String::from(MOCK_CONTRACT_ADDR), &expected_return_amount)],
     )]);
 
-    let second_response = execute(deps.as_mut(), env.clone(), info_contract, sub_msg).unwrap();
+    let second_response = execute(deps.as_mut(), env, info_contract, sub_msg).unwrap();
     let msg_transfer = second_response.messages.get(0).expect("no message");
 
     assert_eq!(
@@ -390,7 +381,7 @@ fn try_native_to_token() {
                 contract_addr: String::from(MOCK_ANCHOR_TOKEN),
                 msg: to_binary(&Cw20ExecuteMsg::Transfer {
                     recipient: String::from("addr0000"),
-                    amount: Uint128::from(expected_return_amount),
+                    amount: expected_return_amount,
                 })
                 .unwrap(),
                 funds: vec![],
@@ -428,10 +419,9 @@ fn try_token_to_native() {
 
     let msg = get_instantiate_message();
 
-    let env = mock_env();
     let info = mock_info("addr0000", &[]);
     // We can just call .unwrap() to assert this was a success
-    instantiate(deps.as_mut(), env, info, msg).unwrap();
+    instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
     // Unauthorized access; can not execute swap directy for token swap
     let msg = ExecuteMsg::Swap {
@@ -448,7 +438,7 @@ fn try_token_to_native() {
     let sender = "addr0000";
     let env = mock_env_with_block_time(1000);
     let info = mock_info(sender, &[]);
-    let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap_err();
+    let res = execute(deps.as_mut(), env, info, msg).unwrap_err();
     assert_eq!(res, ContractError::Unauthorized {});
 
     // Normal sell
@@ -466,7 +456,7 @@ fn try_token_to_native() {
     let info = mock_info(MOCK_ANCHOR_TOKEN, &[]);
     let info_contract = mock_info(env.contract.address.as_str(), &[]);
 
-    let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+    let res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
 
     // Current price is 1.216736524026807943
     // so ret_amount = 1_500_000_000 * 1.216736524026807943
@@ -575,7 +565,7 @@ fn try_token_to_native() {
         }) => {
             assert_eq!(contract_addr, MOCK_CONTRACT_ADDR);
             assert!(funds.is_empty());
-            sub_msg = from_binary(&msg).unwrap();
+            sub_msg = from_binary(msg).unwrap();
 
             assert_eq!(
                 sub_msg,
@@ -610,8 +600,7 @@ fn try_token_to_native() {
         }],
     )]);
 
-    let second_response =
-        execute(deps.as_mut(), env.clone().clone(), info_contract, sub_msg).unwrap();
+    let second_response = execute(deps.as_mut(), env, info_contract, sub_msg).unwrap();
     let msg_transfer = second_response.messages.get(0).expect("no message");
 
     assert_eq!(
@@ -642,8 +631,7 @@ fn try_token_to_native() {
                         .checked_sub(expected_tax_amount)
                         .unwrap(),
                 }],
-            })
-            .into(),
+            }),
             id: 0,
             gas_limit: None,
             reply_on: ReplyOn::Never,
@@ -705,7 +693,7 @@ fn test_deduct() {
         &[(&"uusd".to_string(), &Uint128::from(1000000u128))],
     );
 
-    let amount = Uint128::new(1000_000_000u128);
+    let amount = Uint128::new(1_000_000_000_u128);
     let expected_after_amount = std::cmp::max(
         amount.checked_sub(amount * tax_rate).unwrap(),
         amount.checked_sub(tax_cap).unwrap(),
@@ -972,8 +960,7 @@ fn test_sending_aust_balance_to_maker() {
         &[(&String::from(MOCK_CONTRACT_ADDR), &expected_return_amount)],
     )]);
 
-    let second_response =
-        execute(deps.as_mut(), env.clone().clone(), info_contract, sub_msg).unwrap();
+    let second_response = execute(deps.as_mut(), env, info_contract, sub_msg).unwrap();
     let msg_transfer = second_response.messages.get(0).expect("no message");
 
     assert_eq!(
@@ -1062,7 +1049,7 @@ fn test_sending_ust_balance_to_maker() {
     let sender = "addr0000";
     let env = mock_env_with_block_time(1000);
     let info = mock_info(sender, &[]);
-    let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap_err();
+    let res = execute(deps.as_mut(), env, info, msg).unwrap_err();
     assert_eq!(res, ContractError::Unauthorized {});
 
     // Normal sell
@@ -1078,9 +1065,9 @@ fn test_sending_ust_balance_to_maker() {
     });
     let env = mock_env_with_block_time(1000);
     let info = mock_info(MOCK_ANCHOR_TOKEN, &[]);
-    let info_contract = mock_info(env.contract.address.clone().as_str(), &[]);
+    let info_contract = mock_info(env.contract.address.as_str(), &[]);
 
-    let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+    let res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
 
     // Current price is 1.216736524026807943
     // so ret_amount = 1_500_000_000 * 1.216736524026807943
@@ -1134,24 +1121,21 @@ fn test_sending_ust_balance_to_maker() {
         },
     )
     .unwrap();
-    assert_eq!(
+    assert!(
         (offer_amount.u128() as i128 - reverse_simulation_res.offer_amount.u128() as i128).abs()
-            < 5i128,
-        true
+            < 5i128
     );
-    assert_eq!(
+    assert!(
         (expected_commission_amount.u128() as i128
             - reverse_simulation_res.commission_amount.u128() as i128)
             .abs()
-            < 5i128,
-        true
+            < 5i128
     );
-    assert_eq!(
+    assert!(
         (expected_spread_amount.u128() as i128
             - reverse_simulation_res.spread_amount.u128() as i128)
             .abs()
-            < 5i128,
-        true
+            < 5i128
     );
 
     // checks that the existing assets (uusd) are moved to the maker contract
@@ -1246,8 +1230,7 @@ fn test_sending_ust_balance_to_maker() {
         }],
     )]);
 
-    let second_response =
-        execute(deps.as_mut(), env.clone().clone(), info_contract, sub_msg).unwrap();
+    let second_response = execute(deps.as_mut(), env, info_contract, sub_msg).unwrap();
     let msg_transfer = second_response.messages.get(0).expect("no message");
 
     assert_eq!(
@@ -1277,8 +1260,7 @@ fn test_sending_ust_balance_to_maker() {
                         .checked_sub(expected_tax_amount)
                         .unwrap(),
                 }],
-            })
-            .into(),
+            }),
             id: 0,
             gas_limit: None,
             reply_on: ReplyOn::Never,

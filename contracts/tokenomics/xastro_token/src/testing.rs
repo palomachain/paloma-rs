@@ -214,7 +214,7 @@ mod instantiate {
         let err = instantiate(deps.as_mut(), env, info, instantiate_msg).unwrap_err();
         assert_eq!(
             err,
-            StdError::generic_err("Initial supply greater than cap").into()
+            StdError::generic_err("Initial supply greater than cap")
         );
     }
 }
@@ -613,7 +613,7 @@ fn snapshots_are_taken_and_retrieved_correctly() {
         current_block += 60_000;
 
         let transfer_amount = Uint128::new(10_000);
-        current_addr1_balance = current_addr1_balance - transfer_amount;
+        current_addr1_balance -= transfer_amount;
         current_addr2_balance += transfer_amount;
 
         let info = mock_info(addr1.as_str(), &[]);
@@ -638,8 +638,8 @@ fn snapshots_are_taken_and_retrieved_correctly() {
         current_block += 50_000;
 
         let burn_amount = Uint128::new(20_000);
-        current_total_supply = current_total_supply - burn_amount;
-        current_addr2_balance = current_addr2_balance - burn_amount;
+        current_total_supply -= burn_amount;
+        current_addr2_balance -= burn_amount;
 
         let info = mock_info(addr2.as_str(), &[]);
 

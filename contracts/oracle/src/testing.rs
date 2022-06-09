@@ -16,7 +16,7 @@ fn decimal_overflow() {
         Uint256::from(price_cumulative_current.wrapping_sub(price_cumulative_last)),
         time_elapsed,
     );
-    println!("{}", price_average.to_string());
+    println!("{}", price_average);
     println!("{}", price_average * Uint256::from(amount));
 }
 
@@ -31,10 +31,10 @@ fn oracle_overflow() {
     let usdc_token_contract = Addr::unchecked("usdc-token");
 
     let astro_asset_info = AssetInfo::Token {
-        contract_addr: astro_token_contract.clone(),
+        contract_addr: astro_token_contract,
     };
     let usdc_asset_info = AssetInfo::Token {
-        contract_addr: usdc_token_contract.clone(),
+        contract_addr: usdc_token_contract,
     };
     let astro_asset = Asset {
         info: astro_asset_info.clone(),
@@ -45,7 +45,7 @@ fn oracle_overflow() {
         amount: Uint128::zero(),
     };
 
-    let asset = [astro_asset.clone(), usdc_asset.clone()];
+    let asset = [astro_asset, usdc_asset];
 
     let instantiate_msg = InstantiateMsg {
         factory_contract: factory.to_string(),

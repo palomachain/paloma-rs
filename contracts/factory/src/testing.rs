@@ -54,10 +54,9 @@ fn proper_initialization() {
         whitelist_code_id: 234u64,
     };
 
-    let env = mock_env();
     let info = mock_info("addr0000", &[]);
 
-    let res = instantiate(deps.as_mut(), env.clone(), info, msg).unwrap_err();
+    let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap_err();
     assert_eq!(res, ContractError::PairConfigDuplicate {});
 
     let msg = InstantiateMsg {
@@ -76,10 +75,9 @@ fn proper_initialization() {
         whitelist_code_id: 234u64,
     };
 
-    let env = mock_env();
     let info = mock_info("addr0000", &[]);
 
-    let res = instantiate(deps.as_mut(), env.clone(), info, msg).unwrap_err();
+    let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap_err();
     assert_eq!(res, ContractError::PairConfigInvalidFeeBps {});
 
     let mut deps = mock_dependencies(&[]);
@@ -110,12 +108,11 @@ fn proper_initialization() {
         whitelist_code_id: 234u64,
     };
 
-    let env = mock_env();
     let info = mock_info("addr0000", &[]);
 
-    instantiate(deps.as_mut(), env.clone(), info, msg.clone()).unwrap();
+    instantiate(deps.as_mut(), mock_env(), info, msg.clone()).unwrap();
 
-    let query_res = query(deps.as_ref(), env, QueryMsg::Config {}).unwrap();
+    let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
     let config_res: ConfigResponse = from_binary(&query_res).unwrap();
     assert_eq!(123u64, config_res.token_code_id);
     assert_eq!(msg.pair_configs, config_res.pair_configs);
@@ -137,7 +134,7 @@ fn update_config() {
     }];
 
     let msg = InstantiateMsg {
-        pair_configs: pair_configs.clone(),
+        pair_configs,
         token_code_id: 123u64,
         fee_address: None,
         owner: owner.to_string(),
@@ -145,14 +142,12 @@ fn update_config() {
         whitelist_code_id: 234u64,
     };
 
-    let env = mock_env();
     let info = mock_info(owner, &[]);
 
     // We can just call .unwrap() to assert this was a success
-    let _res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+    let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
     // Update config
-    let env = mock_env();
     let info = mock_info(owner, &[]);
     let msg = ExecuteMsg::UpdateConfig {
         token_code_id: Some(200u64),
@@ -161,11 +156,11 @@ fn update_config() {
         whitelist_code_id: None,
     };
 
-    let res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+    let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
     assert_eq!(0, res.messages.len());
 
     // It worked, let's query the state
-    let query_res = query(deps.as_ref(), env, QueryMsg::Config {}).unwrap();
+    let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
     let config_res: ConfigResponse = from_binary(&query_res).unwrap();
     assert_eq!(200u64, config_res.token_code_id);
     assert_eq!(owner, config_res.owner);
@@ -179,7 +174,6 @@ fn update_config() {
     );
 
     // Unauthorized err
-    let env = mock_env();
     let info = mock_info("addr0000", &[]);
     let msg = ExecuteMsg::UpdateConfig {
         token_code_id: None,
@@ -188,7 +182,7 @@ fn update_config() {
         whitelist_code_id: None,
     };
 
-    let res = execute(deps.as_mut(), env.clone(), info, msg).unwrap_err();
+    let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
     assert_eq!(res, ContractError::Unauthorized {});
 }
 
@@ -206,16 +200,14 @@ fn update_owner() {
         whitelist_code_id: 234u64,
     };
 
-    let env = mock_env();
     let info = mock_info(owner, &[]);
 
     // We can just call .unwrap() to assert this was a success
-    instantiate(deps.as_mut(), env, info, msg).unwrap();
+    instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
     let new_owner = String::from("new_owner");
 
     // New owner
-    let env = mock_env();
     let msg = ExecuteMsg::ProposeNewOwner {
         owner: new_owner.clone(),
         expires_in: 100, // seconds
@@ -224,14 +216,14 @@ fn update_owner() {
     let info = mock_info(new_owner.as_str(), &[]);
 
     // Unauthorized check
-    let err = execute(deps.as_mut(), env.clone(), info, msg.clone()).unwrap_err();
+    let err = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap_err();
     assert_eq!(err.to_string(), "Generic error: Unauthorized");
 
     // Claim before proposal
     let info = mock_info(new_owner.as_str(), &[]);
     execute(
         deps.as_mut(),
-        env.clone(),
+        mock_env(),
         info,
         ExecuteMsg::ClaimOwnership {},
     )
@@ -239,14 +231,14 @@ fn update_owner() {
 
     // Propose new owner
     let info = mock_info(owner, &[]);
-    let res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+    let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
     assert_eq!(0, res.messages.len());
 
     // Unauthorized ownership claim
     let info = mock_info("invalid_addr", &[]);
     let err = execute(
         deps.as_mut(),
-        env.clone(),
+        mock_env(),
         info,
         ExecuteMsg::ClaimOwnership {},
     )
@@ -257,7 +249,7 @@ fn update_owner() {
     let info = mock_info(new_owner.as_str(), &[]);
     let res = execute(
         deps.as_mut(),
-        env.clone(),
+        mock_env(),
         info,
         ExecuteMsg::ClaimOwnership {},
     )
@@ -266,7 +258,7 @@ fn update_owner() {
 
     // Let's query the state
     let config: ConfigResponse =
-        from_binary(&query(deps.as_ref(), env.clone(), QueryMsg::Config {}).unwrap()).unwrap();
+        from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
     assert_eq!(new_owner, config.owner);
 }
 
@@ -292,14 +284,13 @@ fn update_pair_config() {
         whitelist_code_id: 234u64,
     };
 
-    let env = mock_env();
     let info = mock_info("addr0000", &[]);
 
     // We can just call .unwrap() to assert this was a success
-    instantiate(deps.as_mut(), env.clone(), info, msg).unwrap();
+    instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
     // It worked, let's query the state
-    let query_res = query(deps.as_ref(), env.clone(), QueryMsg::Config {}).unwrap();
+    let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
     let config_res: ConfigResponse = from_binary(&query_res).unwrap();
     assert_eq!(pair_configs, config_res.pair_configs);
 
@@ -314,18 +305,16 @@ fn update_pair_config() {
     };
 
     // Unauthorized err
-    let env = mock_env();
     let info = mock_info("wrong-addr0000", &[]);
     let msg = ExecuteMsg::UpdatePairConfig {
         config: pair_config.clone(),
     };
 
-    let res = execute(deps.as_mut(), env.clone(), info, msg).unwrap_err();
+    let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
     assert_eq!(res, ContractError::Unauthorized {});
 
     // Check validation of total and maker fee bps
-    let env = mock_env();
-    let info = mock_info(owner.clone(), &[]);
+    let info = mock_info(owner, &[]);
     let msg = ExecuteMsg::UpdatePairConfig {
         config: PairConfig {
             code_id: 123u64,
@@ -337,19 +326,19 @@ fn update_pair_config() {
         },
     };
 
-    let res = execute(deps.as_mut(), env.clone(), info, msg).unwrap_err();
+    let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
     assert_eq!(res, ContractError::PairConfigInvalidFeeBps {});
 
-    let info = mock_info(owner.clone(), &[]);
+    let info = mock_info(owner, &[]);
     let msg = ExecuteMsg::UpdatePairConfig {
         config: pair_config.clone(),
     };
 
-    let res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+    let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
     assert_eq!(0, res.messages.len());
 
     // It worked, let's query the state
-    let query_res = query(deps.as_ref(), env.clone(), QueryMsg::Config {}).unwrap();
+    let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
     let config_res: ConfigResponse = from_binary(&query_res).unwrap();
     assert_eq!(vec![pair_config.clone()], config_res.pair_configs);
 
@@ -363,18 +352,18 @@ fn update_pair_config() {
         is_generator_disabled: false,
     };
 
-    let info = mock_info(owner.clone(), &[]);
+    let info = mock_info(owner, &[]);
     let msg = ExecuteMsg::UpdatePairConfig {
         config: pair_config_custom.clone(),
     };
 
-    execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+    execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
     // It worked, let's query the state
-    let query_res = query(deps.as_ref(), env.clone(), QueryMsg::Config {}).unwrap();
+    let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
     let config_res: ConfigResponse = from_binary(&query_res).unwrap();
     assert_eq!(
-        vec![pair_config_custom.clone(), pair_config.clone()],
+        vec![pair_config_custom, pair_config],
         config_res.pair_configs
     );
 }
@@ -401,11 +390,10 @@ fn create_pair() {
         whitelist_code_id: 234u64,
     };
 
-    let env = mock_env();
     let info = mock_info("addr0000", &[]);
 
     // We can just call .unwrap() to assert this was a success
-    let _res = instantiate(deps.as_mut(), env, info, msg.clone()).unwrap();
+    let _res = instantiate(deps.as_mut(), mock_env(), info, msg.clone()).unwrap();
 
     let asset_infos = [
         AssetInfo::Token {
@@ -417,13 +405,12 @@ fn create_pair() {
     ];
 
     let config = CONFIG.load(&deps.storage);
-    let env = mock_env();
     let info = mock_info("addr0000", &[]);
 
     // Check pair creation using a non-whitelisted pair ID
     let res = execute(
         deps.as_mut(),
-        env.clone(),
+        mock_env(),
         info.clone(),
         ExecuteMsg::CreatePair {
             pair_type: PairType::Stable {},
@@ -436,7 +423,7 @@ fn create_pair() {
 
     let res = execute(
         deps.as_mut(),
-        env,
+        mock_env(),
         info,
         ExecuteMsg::CreatePair {
             pair_type: PairType::Xyk {},
@@ -459,7 +446,7 @@ fn create_pair() {
             msg: WasmMsg::Instantiate {
                 msg: to_binary(&PairInstantiateMsg {
                     factory_addr: String::from(MOCK_CONTRACT_ADDR),
-                    asset_infos: asset_infos.clone(),
+                    asset_infos,
                     token_code_id: msg.token_code_id,
                     init_params: None
                 })
@@ -498,9 +485,8 @@ fn register() {
         whitelist_code_id: 234u64,
     };
 
-    let env = mock_env();
     let info = mock_info("addr0000", &[]);
-    let _res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+    let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
     let asset_infos = [
         AssetInfo::Token {
@@ -517,9 +503,8 @@ fn register() {
         init_params: None,
     };
 
-    let env = mock_env();
     let info = mock_info("addr0000", &[]);
-    let _res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+    let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
     let pair0_addr = "pair0000".to_string();
     let pair0_info = PairInfo {
@@ -555,7 +540,7 @@ fn register() {
 
     let query_res = query(
         deps.as_ref(),
-        env.clone(),
+        mock_env(),
         QueryMsg::Pair {
             asset_infos: asset_infos.clone(),
         },
@@ -593,9 +578,8 @@ fn register() {
         init_params: None,
     };
 
-    let env = mock_env();
     let info = mock_info("addr0000", &[]);
-    let _res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+    let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
     let pair1_addr = "pair0001".to_string();
     let pair1_info = PairInfo {
@@ -627,14 +611,14 @@ fn register() {
         }),
     };
 
-    let _res = reply(deps.as_mut(), mock_env(), reply_msg_2.clone()).unwrap();
+    let _res = reply(deps.as_mut(), mock_env(), reply_msg_2).unwrap();
 
     let query_msg = QueryMsg::Pairs {
         start_after: None,
         limit: None,
     };
 
-    let res = query(deps.as_ref(), env.clone(), query_msg).unwrap();
+    let res = query(deps.as_ref(), mock_env(), query_msg).unwrap();
     let pairs_res: PairsResponse = from_binary(&res).unwrap();
     assert_eq!(
         pairs_res.pairs,
@@ -659,7 +643,7 @@ fn register() {
         limit: Some(1),
     };
 
-    let res = query(deps.as_ref(), env.clone(), query_msg).unwrap();
+    let res = query(deps.as_ref(), mock_env(), query_msg).unwrap();
     let pairs_res: PairsResponse = from_binary(&res).unwrap();
     assert_eq!(
         pairs_res.pairs,
@@ -676,7 +660,7 @@ fn register() {
         limit: None,
     };
 
-    let res = query(deps.as_ref(), env.clone(), query_msg).unwrap();
+    let res = query(deps.as_ref(), mock_env(), query_msg).unwrap();
     let pairs_res: PairsResponse = from_binary(&res).unwrap();
     assert_eq!(
         pairs_res.pairs,
@@ -689,11 +673,10 @@ fn register() {
     );
 
     // Deregister from wrong acc
-    let env = mock_env();
     let info = mock_info("wrong_addr0000", &[]);
     let res = execute(
         deps.as_mut(),
-        env.clone(),
+        mock_env(),
         info,
         ExecuteMsg::Deregister {
             asset_infos: asset_infos_2.clone(),
@@ -704,14 +687,13 @@ fn register() {
     assert_eq!(res, ContractError::Unauthorized {});
 
     // Proper deregister
-    let env = mock_env();
-    let info = mock_info(owner.clone(), &[]);
+    let info = mock_info(owner, &[]);
     let res = execute(
         deps.as_mut(),
-        env.clone(),
+        mock_env(),
         info,
         ExecuteMsg::Deregister {
-            asset_infos: asset_infos_2.clone(),
+            asset_infos: asset_infos_2,
         },
     )
     .unwrap();
@@ -723,14 +705,14 @@ fn register() {
         limit: None,
     };
 
-    let res = query(deps.as_ref(), env.clone(), query_msg).unwrap();
+    let res = query(deps.as_ref(), mock_env(), query_msg).unwrap();
     let pairs_res: PairsResponse = from_binary(&res).unwrap();
     assert_eq!(
         pairs_res.pairs,
         vec![PairInfo {
             liquidity_token: Addr::unchecked("liquidity0000"),
             contract_addr: Addr::unchecked("pair0000"),
-            asset_infos: asset_infos.clone(),
+            asset_infos,
             pair_type: PairType::Xyk {},
         },]
     );
