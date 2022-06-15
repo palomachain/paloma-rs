@@ -1023,7 +1023,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha3 0.9.1",
- "wormhole-bridge-terra",
+ "wormhole-bridge-paloma",
 ]
 
 [[package]]
@@ -1621,7 +1621,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "token-bridge-terra"
+name = "token-bridge-paloma"
 version = "0.1.0"
 dependencies = [
  "astroport",
@@ -1638,7 +1638,7 @@ dependencies = [
  "serde_json",
  "sha3 0.10.1",
  "thiserror",
- "wormhole-bridge-terra",
+ "wormhole-bridge-paloma",
 ]
 
 [[package]]
@@ -1721,7 +1721,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
-name = "wormhole-bridge-terra"
+name = "wormhole-bridge-paloma"
 version = "0.1.0"
 dependencies = [
  "cosmwasm-std",

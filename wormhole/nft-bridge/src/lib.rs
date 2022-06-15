@@ -3,5 +3,5 @@ pub mod msg;
 pub mod state;
 pub mod token_id;
 
-// Chain ID of Terra
+// Chain ID of Paloma
 const CHAIN_ID: u16 = 3;

@@ -38,7 +38,7 @@ use crate::state::{
 
 type HumanAddr = String;
 
-// Chain ID of Terra
+// Chain ID of Paloma
 const CHAIN_ID: u16 = 3;
 
 const WRAPPED_ASSET_UPDATING: &str = "updating";
@@ -913,7 +913,7 @@ fn handle_complete_transfer_token_native(
 
     Ok(Response::new()
         .add_messages(messages)
-        .add_attribute("action", "complete_transfer_terra_native")
+        .add_attribute("action", "complete_transfer_paloma_native")
         .add_attribute("recipient", recipient)
         .add_attribute("denom", denom)
         .add_attribute("amount", amount.to_string())
@@ -1339,7 +1339,7 @@ pub fn build_asset_id(chain: u16, address: &[u8]) -> Vec<u8> {
     hasher.finalize().to_vec()
 }
 
-// Produce a 20 byte asset "address" from a native terra denom.
+// Produce a 20 byte asset "address" from a native paloma denom.
 pub fn build_native_id(denom: &str) -> Vec<u8> {
     let n = denom.len();
     assert!(n < 20);

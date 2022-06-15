@@ -6,7 +6,7 @@ use cosmwasm_std::{
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::{config, config_read, Config};
 
-use token_bridge_terra::msg::{
+use token_bridge_paloma::msg::{
     ExecuteMsg as TokenBridgeExecuteMsg, QueryMsg as TokenBridgeQueryMessage, TransferInfoResponse,
 };
 

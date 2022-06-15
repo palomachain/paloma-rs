@@ -28,7 +28,7 @@ use std::convert::TryFrom;
 
 type HumanAddr = String;
 
-// Chain ID of Terra
+// Chain ID of Paloma
 const CHAIN_ID: u16 = 3;
 
 // Lock assets fee amount and denomination

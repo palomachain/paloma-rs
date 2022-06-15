@@ -19,7 +19,7 @@ use crate::CHAIN_ID;
 // We call a token id that's in string format an "internal id", and a token id
 // that's in 32 byte format an "external id". Note that whether a token id is in
 // internal format or external format doesn't imply which chain the token id
-// originates from. We can have a terra (native) token id in both internal and
+// originates from. We can have a paloma (native) token id in both internal and
 // external formats, and likewise we can have an ethereum token in in both
 // internal and external formats.
 //

@@ -1,43 +1,43 @@
-# Terra Wormhole Contract Deployment
+# Wormhole Contract Deployment
 
-This readme describes the steps for building, verifying, and deploying Terra smart contracts for Wormhole.
+This readme describes the steps for building, verifying, and deploying smart contracts for Wormhole.
 
 **WARNING**: *This process is only Linux host compatible at this time.*
 
 ## Verify Tilt
 
-Before building Terra contracts, ensure that the specific commit you will be
+Before building contracts, ensure that the specific commit you will be
 building from passes in tilt. This that ensures basic functionality of the
-Terra smart contracts that you are about to build and deploy.
+Paloma smart contracts that you are about to build and deploy.
 
 ## Build Contracts
 
-The following command can be used to build Terra contracts via Docker.
+The following command can be used to build Paloma contracts via Docker.
 
 Build Target Options: [`mainnet`|`testnet`|`devnet`|
 
 These network names correspond to the naming convention used by wormhole
-elsewhere. This means that `mainnet` corresponds to Terra `mainnet`,
-`testnet` corresponds to Terra `testnet`, and `devnet` is `localterra`.
+elsewhere. This means that `mainnet` corresponds to Paloma `mainnet`,
+`testnet` corresponds to Paloma `testnet`, and `devnet` is `localpaloma`.
 
 ```console
-wormhole/terra $ make artifacts
+wormhole/paloma $ make artifacts
 ```
 
-Upon completion, the compiled bytecode for the Terra contracts will be placed
+Upon completion, the compiled bytecode for the contracts will be placed
 into the `artifacts` directory.
 
-## Verify Checksums 
+## Verify Checksums
 
-Now that you have built the Terra contracts, you should ask a peer to build
+Now that you have built the contracts, you should ask a peer to build
 using the same process and compare the equivalent checksums.txt files to make
 sure the contract bytecode(s) are deterministic.
 
 ```console
-wormhole/terra $ cat artifacts/checksums.txt
+wormhole/paloma $ cat artifacts/checksums.txt
 ```
 
-Once you have verified the Terra contracts are deterministic with a peer, you can now move to the deploy step.
+Once you have verified the contracts are deterministic with a peer, you can now move to the deploy step.
 
 ## Run tests
 
@@ -46,16 +46,16 @@ Once you have verified the Terra contracts are deterministic with a peer, you ca
 You can run the integration test suite on the artifacts you built.
 
 ```console
-wormhole/terra $ make test
+wormhole/paloma $ make test
 ```
 
 This command deploys your artifacts and performs various interactions with your
-contracts in a LocalTerra node. Any new functionality (including expected errors)
+contracts in a LocalPaloma node. Any new functionality (including expected errors)
 to the contracts should be added to this test suite.
 
 ## Deploy Contracts
 
-Now that you have built and verified checksums, you can now deploy one or more relevant contracts to the Terra blockchain.
+Now that you have built and verified checksums, you can now deploy one or more relevant contracts to Paloma.
 
 Deploy Target Options: [`mainnet`|`testnet`|`devnet`]
 
@@ -64,9 +64,9 @@ target (eg. `payer-testnet.json`).  This will contain the relevant wallet
 private key that you will be using to deploy the contracts.
 
 ```console
-wormhole/terra $ make deploy/bridge
-wormhole/terra $ make deploy/token_bridge
-wormhole/terra $ make deploy/nft_bridge
+wormhole/paloma $ make deploy/bridge
+wormhole/paloma $ make deploy/token_bridge
+wormhole/paloma $ make deploy/nft_bridge
 ```
 
 For each deployed contract, you will get a code id for that relevant
@@ -82,15 +82,15 @@ above.
 For each contract you wish to verify on-chain, you will need the following elements:
 
 - Path to the contracts bytecode (eg. `artifacts-testnet/token_bridge.wasm`)
-- Terra code id for the relevant contract (eg. `59614`)
+- Paloma code id for the relevant contract (eg. `59614`)
 - A network to verify on (`mainnet`, `testnet`, or `devnet`)
 
 Below is how to verify all three contracts:
 
 ```console
-wormhole/terra $ ./verify artifacts/wormhole.wasm NEW_BRIDGE_CODE_ID
-wormhole/terra $ ./verify artifacts/token_bridge.wasm NEW_TOKEN_BRIDGE_CODE_ID
-wormhole/terra $ ./verify artifacts/nft_bridge.wasm NEW_NFT_BRIDGE_CODE_ID
+wormhole/paloma $ ./verify artifacts/wormhole.wasm NEW_BRIDGE_CODE_ID
+wormhole/paloma $ ./verify artifacts/token_bridge.wasm NEW_TOKEN_BRIDGE_CODE_ID
+wormhole/paloma $ ./verify artifacts/nft_bridge.wasm NEW_NFT_BRIDGE_CODE_ID
 ```
 Example: `./verify artifacts/token_bridge.wasm 59614`
 
@@ -121,7 +121,7 @@ Once the guardians have reached quorum, the VAA may be submitted from any
 funded wallet: TODO - make this easier and more unified
 
 ``` sh
-node main.js terra execute_governance_vaa <signed VAA (hex)> --rpc "https://lcd.terra.dev" --chain_id "columbus-5" --mnemonic "..." --token_bridge "terra10nmmwe8r3g99a9newtqa7a75xfgs2e8z87r2sf"
+node main.js paloma execute_governance_vaa <signed VAA (hex)> --rpc "https://lcd.paloma.dev" --chain_id "columbus-5" --mnemonic "..." --token_bridge "paloma10nmmwe8r3g99a9newtqa7a75xfgs2e8z87r2sf"
 ```
 
 ### Testnet
@@ -132,5 +132,5 @@ authority, so these don't have to go through governance.
 For example, to migrate the token bridge to 59614, run in `tools/`:
 
 ``` sh
-node migrate_testnet.js --code_id 59614 --contract terra1pseddrv0yfsn76u4zxrjmtf45kdlmalswdv39a --mnemonic "..."
+node migrate_testnet.js --code_id 59614 --contract paloma1pseddrv0yfsn76u4zxrjmtf45kdlmalswdv39a --mnemonic "..."
 ```
