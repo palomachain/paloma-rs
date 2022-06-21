@@ -9,7 +9,15 @@
       ],
       "properties": {
         "lay_egg": {
-          "type": "object"
+          "type": "object",
+          "required": [
+            "eth_address"
+          ],
+          "properties": {
+            "eth_address": {
+              "type": "string"
+            }
+          }
         }
       },
       "additionalProperties": false
