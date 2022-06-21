@@ -1,0 +1,22 @@
+[package]
+name = "egg-mint"
+version = "0.1.0"
+edition = "2021"
+description = "Mint Eggs on Ethereum"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+backtraces = ["cosmwasm-std/backtraces"]
+# use library feature to disable all init/handle/query exports
+library = []
+
+[dependencies]
+cosmwasm-std = "1.0.0"
+schemars = "0.8.10"
+serde = { version = "1.0.137", default-features = false, features = ["derive"] }
+
+[dev-dependencies]
+serde_json = "1.0"
+lazy_static = "1.4.0"
