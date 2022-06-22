@@ -1,3 +1,4 @@
+use crate::msg::TargetContractInfo;
 use cw_storage_plus::Item;
 
-pub const COMPASS_ID: Item<String> = Item::new("compass_id");
+pub const TARGET_CONTRACT_INFO: Item<TargetContractInfo> = Item::new("target_contract_info");
