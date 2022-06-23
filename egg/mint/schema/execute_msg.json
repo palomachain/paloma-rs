@@ -21,6 +21,18 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "pick_winner"
+      ],
+      "properties": {
+        "pick_winner": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
     }
   ]
 }

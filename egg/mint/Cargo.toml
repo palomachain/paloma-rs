@@ -16,7 +16,9 @@ library = []
 cosmwasm-std = "1.0.0"
 cw-storage-plus = "0.13.2"
 ethabi = "17.1.0"
+eyre = "0.6.8"
 hex = "0.4.3"
+rand = "0.8.5"
 schemars = "0.8.10"
 serde = { version = "1.0.137", default-features = false, features = ["derive"] }
 

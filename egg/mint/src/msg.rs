@@ -24,6 +24,7 @@ pub struct TargetContractInfo {
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     LayEgg { eth_address: String },
+    PickWinner {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
