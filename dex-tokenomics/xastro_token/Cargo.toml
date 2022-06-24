@@ -18,7 +18,7 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
-astroport = { path = "../../../packages/astroport", default-features = false }
+astroport = { path = "../../packages/astroport", default-features = false }
 cosmwasm-std = { version = "1.0.0", features = ["iterator"] }
 cw-storage-plus = { version = "0.13.2", features = ['iterator'] }
 cw2 = "0.13.2"

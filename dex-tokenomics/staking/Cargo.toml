@@ -20,7 +20,7 @@ crate-type = ["cdylib", "rlib"]
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-astroport = { path = "../../../packages/astroport", default-features = false }
+astroport = { path = "../../packages/astroport", default-features = false }
 cosmwasm-std = "1.0.0"
 cw-storage-plus = "0.13.2"
 cw2 = "0.13.2"

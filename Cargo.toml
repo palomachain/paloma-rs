@@ -1,28 +1,11 @@
 [workspace]
 resolver = "2"
 members = [
-#    "contracts/mock-bridge-integration",
-    "contracts/factory",
-    "contracts/oracle",
-    "contracts/pair",
-    "contracts/pair_anchor",
-    "contracts/pair_stable",
-    "contracts/router",
-    "contracts/token",
-    "contracts/tokenomics/maker",
-    "contracts/tokenomics/staking",
-    "contracts/tokenomics/vesting",
-    "contracts/tokenomics/xastro_token",
-    "contracts/whitelist",
+    "dex-tokenomics/*",
+    "dex/*",
     "egg/*",
     "packages/*",
-    "wormhole/cw20-legacy",
-    "wormhole/cw20-wrapped",
-    "wormhole/cw721-base",
-    "wormhole/cw721-wrapped",
-    "wormhole/nft-bridge",
-    "wormhole/token-bridge",
-    "wormhole/wormhole",
+    "wormhole/*",
 ]
 
 [profile.release]

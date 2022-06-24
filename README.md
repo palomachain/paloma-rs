@@ -1,43 +1,21 @@
-# Astroport Core
+# Paloma Rust
 
-[![codecov](https://codecov.io/gh/astroport-fi/astroport-core/branch/main/graph/badge.svg?token=ROOLZTGZMM)](https://codecov.io/gh/astroport-fi/astroport-core)
+Contracts and infrastructure related to the [Paloma](https://github.com/palomachain/paloma) Blockchain.
 
-Multi pool type automated market-maker (AMM) protocol powered by smart contracts on the [Paloma](https://github.com/palomachain/paloma) blockchain.
+## Crates
 
-## Contracts diagram
+| Name                                   | Description                                   |
+|----------------------------------------|-----------------------------------------------|
+| [`dex`](dex)                           | Automatic market maker                        |
+| [`dex-tokenomics`](dex-tokenomics)     | Tokenomics related smart contracts            |
+| [`egg`](egg)                           | Simple contract for a minting contest         |
+| [`wormhole`](wormhole/)                | Contracts for communicating with other chains |
 
-![contract diagram](./assets/sc_diagram.png "Contracts Diagram")
-
-## General Contracts
-
-| Name                                                       | Description                                  |
-| ---------------------------------------------------------- | -------------------------------------------- |
-| [`factory`](contracts/factory)                             | Pool creation factory                        |
-| [`pair`](contracts/pair)                                   | Pair with x*y=k curve                        |
-| [`pair_stable`](contracts/pair_stable)                     | Pair with stableswap invariant curve         |
-| [`token`](contracts/token)                                 | CW20 (ERC20 equivalent) token implementation |
-| [`router`](contracts/router)                               | Multi-hop trade router                       |
-| [`oracle`](contracts/periphery/oracle)                     | TWAP oracles for x*y=k pool types            |
-| [`whitelist`](contracts/whitelist)                         | CW1 whitelist contract                       |
-
-## Tokenomics Contracts
-
-Tokenomics related smart contracts are hosted on ../contracts/tokenomics.
-
-| Name                                                       | Description                                      |
-| ---------------------------------------------------------- | ------------------------------------------------ |
-| [`generator`](contracts/tokenomics/generator)                                   | Rewards generator for liquidity providers        |
-| [`generator_proxy_to_mirror`](contracts/tokenomics/generator_proxy_to_mirror)   | Rewards generator proxy for liquidity providers  |
-| [`maker`](contracts/tokenomics/maker)                                           | Fee collector and swapper                        |
-| [`staking`](contracts/tokenomics/staking)                                       | xASTRO staking contract                          |
-| [`vesting`](contracts/tokenomics/vesting)                                       | ASTRO distributor for generator rewards          |
-| [`xastro_token`](contracts/tokenomics/xastro_token)                             | xASTRO token contract                            |
-
-## Building Contracts
+## Building
 
 You will need Rust 1.58.1+ with wasm32-unknown-unknown target installed.
 
-You can run unit tests for each contract directory via:
+You can run unit tests with
 
 ```
 cargo test
@@ -52,20 +30,5 @@ Run the following from the repository root
 
 The optimized contracts are generated in the artifacts/ directory.
 
-#### You can compile each contract:
-Go to contract directory and run
-
-```
-RUSTFLAGS='-C link-arg=-s' cargo wasm
-cp ../../target/wasm32-unknown-unknown/release/astroport_token.wasm .
-ls -l astroport_token.wasm
-sha256sum astroport_token.wasm
-```
-
-## Docs
-
-Docs can be generated using `cargo doc --no-deps`
-
-## Bug Bounty
-
-The contracts in this repo are included in a [bug bounty program](https://www.immunefi.com/bounty/astroport).
+You can compile contracts to wasm with `cargo wasm`.
+The compiled wasm can be found at `target/wasm32-unknown-unknown/release/<contract>.wasm`.
