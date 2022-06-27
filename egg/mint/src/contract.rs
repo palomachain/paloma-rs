@@ -12,7 +12,7 @@ use std::collections::HashSet;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 
-pub(crate) const ENTRANCE_FEE: u128 = 10_000_000_000;
+pub(crate) const ENTRANCE_FEE: u128 = 1_000_000;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
@@ -64,7 +64,7 @@ fn lay_egg(
     // Not depositing anywhere, just dropping on the floor.
     ensure!(
         info.funds == [entry_fee],
-        "Entry fee is 10000 grain, please supply funds."
+        "Entry fee is 1 grain, please supply funds."
     );
 
     let paloma_winners = PALOMA_WINNERS.load(deps.storage)?;
