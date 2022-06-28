@@ -1,38 +1,45 @@
-use std::cmp::Ordering;
-use std::str::FromStr;
-use std::vec;
-
-use astroport::asset::{addr_validate_to_lower, format_lp_token_name, Asset, AssetInfo, PairInfo};
-use astroport::factory::PairType;
-use astroport::generator::Cw20HookMsg as GeneratorHookMsg;
-use astroport::math::{to_decimal, to_decimal256};
-use astroport::pair::{
-    migration_check, ConfigResponse, CumulativePricesResponse, Cw20HookMsg, ExecuteMsg,
-    InstantiateMsg, MigrateMsg, PoolResponse, QueryMsg, ReverseSimulationResponse,
-    SimulationResponse, StablePoolConfig, StablePoolParams, StablePoolUpdateParams,
-    DEFAULT_SLIPPAGE, MAX_ALLOWED_SLIPPAGE, TWAP_PRECISION,
-};
-use astroport::querier::{
-    query_factory_config, query_fee_info, query_supply, query_token_precision,
-};
-use astroport::token;
-use cosmwasm_std::{
-    attr, entry_point, from_binary, to_binary, Addr, Binary, CosmosMsg, Decimal, Decimal256, Deps,
-    DepsMut, Env, Isqrt, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg,
-    Uint128, Uint256, Uint64, WasmMsg,
-};
-use cw2::set_contract_version;
-use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
-use paloma_cosmwasm::PalomaQueryWrapper;
-use protobuf::Message;
-
 use crate::error::ContractError;
 use crate::math::{
     calc_ask_amount, calc_offer_amount, compute_d, AMP_PRECISION, MAX_AMP, MAX_AMP_CHANGE,
     MIN_AMP_CHANGING_TIME, N_COINS,
 };
-use crate::response::MsgInstantiateContractResponse;
 use crate::state::{Config, CONFIG};
+#[cfg(not(feature = "library"))]
+use cosmwasm_std::entry_point;
+use cosmwasm_std::{
+    attr, from_binary, to_binary, Addr, Binary, CosmosMsg, Decimal, Deps, DepsMut, Env, Fraction,
+    MessageInfo, QuerierWrapper, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128,
+    Uint64, WasmMsg,
+};
+
+use crate::response::MsgInstantiateContractResponse;
+use astroport::asset::{
+    addr_opt_validate, addr_validate_to_lower, check_swap_parameters, format_lp_token_name,
+    token_asset_info, Asset, AssetInfo, PairInfo,
+};
+use astroport::factory::PairType;
+
+use astroport::generator::Cw20HookMsg as GeneratorHookMsg;
+use astroport::pair::{
+    migration_check, ConfigResponse, InstantiateMsg, StablePoolParams, StablePoolUpdateParams,
+    DEFAULT_SLIPPAGE, MAX_ALLOWED_SLIPPAGE, TWAP_PRECISION,
+};
+
+use astroport::pair::{
+    CumulativePricesResponse, Cw20HookMsg, ExecuteMsg, MigrateMsg, PoolResponse, QueryMsg,
+    ReverseSimulationResponse, SimulationResponse, StablePoolConfig,
+};
+use astroport::querier::{
+    query_factory_config, query_fee_info, query_supply, query_token_precision,
+};
+use astroport::token::InstantiateMsg as TokenInstantiateMsg;
+use astroport::U256;
+use cw2::set_contract_version;
+use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
+use protobuf::Message;
+use std::cmp::Ordering;
+use std::str::FromStr;
+use std::vec;
 
 /// Contract name that is used for migration.
 const CONTRACT_NAME: &str = "astroport-pair-stable";
@@ -54,7 +61,7 @@ const INSTANTIATE_TOKEN_REPLY_ID: u64 = 1;
 /// * **msg** is a message of type [`InstantiateMsg`] which contains the parameters for creating the contract.
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut<PalomaQueryWrapper>,
+    deps: DepsMut,
     env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
@@ -85,7 +92,7 @@ pub fn instantiate(
             asset_infos: msg.asset_infos.clone(),
             pair_type: PairType::Stable {},
         },
-        factory_addr: addr_validate_to_lower(deps.api, msg.factory_addr.as_str())?,
+        factory_addr: addr_validate_to_lower(deps.api, msg.factory_addr)?,
         block_time_last: 0,
         price0_cumulative_last: Uint128::zero(),
         price1_cumulative_last: Uint128::zero(),
@@ -97,13 +104,13 @@ pub fn instantiate(
 
     CONFIG.save(deps.storage, &config)?;
 
-    let token_name = format_lp_token_name(msg.asset_infos, &deps.querier)?;
+    let token_name = format_lp_token_name(&msg.asset_infos, &deps.querier)?;
 
     // Create LP token
     let sub_msg: Vec<SubMsg> = vec![SubMsg {
         msg: WasmMsg::Instantiate {
             code_id: msg.token_code_id,
-            msg: to_binary(&token::InstantiateMsg {
+            msg: to_binary(&TokenInstantiateMsg {
                 name: token_name,
                 symbol: "uLP".to_string(),
                 decimals: 6,
@@ -112,6 +119,7 @@ pub fn instantiate(
                     minter: env.contract.address.to_string(),
                     cap: None,
                 }),
+                marketing: None,
             })?,
             funds: vec![],
             admin: None,
@@ -135,11 +143,7 @@ pub fn instantiate(
 ///
 /// * **msg** is an object of type [`Reply`]. This is the reply from the submessage.
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(
-    deps: DepsMut<PalomaQueryWrapper>,
-    _env: Env,
-    msg: Reply,
-) -> Result<Response, ContractError> {
+pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let mut config: Config = CONFIG.load(deps.storage)?;
 
     if config.pair_info.liquidity_token != Addr::unchecked("") {
@@ -193,14 +197,14 @@ pub fn reply(
 ///         }** Performs an swap using the specified parameters.
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut<PalomaQueryWrapper>,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     let cfg = CONFIG.load(deps.storage)?;
 
-    if migration_check(deps.as_ref(), &cfg.factory_addr, &env.contract.address)? {
+    if migration_check(deps.querier, &cfg.factory_addr, &env.contract.address)? {
         return Err(ContractError::PairIsNotMigrated {});
     }
 
@@ -232,11 +236,7 @@ pub fn execute(
                 return Err(ContractError::Unauthorized {});
             }
 
-            let to_addr = if let Some(to_addr) = to {
-                Some(addr_validate_to_lower(deps.api, &to_addr)?)
-            } else {
-                None
-            };
+            let to_addr = addr_opt_validate(deps.api, &to)?;
 
             swap(
                 deps,
@@ -265,21 +265,20 @@ pub fn execute(
 ///
 /// * **cw20_msg** is an object of type [`Cw20ReceiveMsg`]. This is the CW20 receive message to process.
 pub fn receive_cw20(
-    deps: DepsMut<PalomaQueryWrapper>,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
 ) -> Result<Response, ContractError> {
-    let contract_addr = info.sender.clone();
     match from_binary(&cw20_msg.msg) {
         Ok(Cw20HookMsg::Swap {
             belief_price,
             max_spread,
             to,
         }) => {
-            // Only an asset (token) contract can execute this message
-            let mut authorized: bool = false;
-            let config: Config = CONFIG.load(deps.storage)?;
+            // Only asset contract can execute this message
+            let mut authorized = false;
+            let config = CONFIG.load(deps.storage)?;
 
             for pool in config.pair_info.asset_infos {
                 if let AssetInfo::Token { contract_addr, .. } = &pool {
@@ -293,17 +292,14 @@ pub fn receive_cw20(
                 return Err(ContractError::Unauthorized {});
             }
 
-            let to_addr = if let Some(to_addr) = to {
-                Some(addr_validate_to_lower(deps.api, to_addr.as_str())?)
-            } else {
-                None
-            };
-
+            let to_addr = addr_opt_validate(deps.api, &to)?;
+            let contract_addr = info.sender.clone();
+            let sender = addr_validate_to_lower(deps.api, cw20_msg.sender)?;
             swap(
                 deps,
                 env,
                 info,
-                Addr::unchecked(cw20_msg.sender),
+                sender,
                 Asset {
                     info: AssetInfo::Token { contract_addr },
                     amount: cw20_msg.amount,
@@ -313,14 +309,11 @@ pub fn receive_cw20(
                 to_addr,
             )
         }
-        Ok(Cw20HookMsg::WithdrawLiquidity {}) => withdraw_liquidity(
-            deps,
-            env,
-            info,
-            Addr::unchecked(cw20_msg.sender),
-            cw20_msg.amount,
-        ),
-        Err(err) => Err(ContractError::Std(err)),
+        Ok(Cw20HookMsg::WithdrawLiquidity {}) => {
+            let sender = addr_validate_to_lower(deps.api, cw20_msg.sender)?;
+            withdraw_liquidity(deps, env, info, sender, cw20_msg.amount)
+        }
+        Err(err) => Err(err.into()),
     }
 }
 
@@ -346,7 +339,7 @@ pub fn receive_cw20(
 /// If this address isn't specified, the function will default to the caller.
 /// NOTE - the address that wants to provide liquidity should approve the pair contract to pull its relevant tokens.
 pub fn provide_liquidity(
-    deps: DepsMut<PalomaQueryWrapper>,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     assets: [Asset; 2],
@@ -362,11 +355,11 @@ pub fn provide_liquidity(
         asset.assert_sent_native_token_balance(&info)?;
     }
 
-    let mut config: Config = CONFIG.load(deps.storage)?;
-    let mut pools: [Asset; 2] = config
+    let mut config = CONFIG.load(deps.storage)?;
+    let mut pools = config
         .pair_info
         .query_pools(&deps.querier, env.contract.address.clone())?;
-    let deposits: [Uint128; 2] = [
+    let deposits = [
         assets
             .iter()
             .find(|a| a.info.equal(&pools[0].info))
@@ -383,7 +376,7 @@ pub fn provide_liquidity(
         return Err(ContractError::InvalidZeroAmount {});
     }
 
-    let mut messages: Vec<CosmosMsg> = vec![];
+    let mut messages = vec![];
     for (i, pool) in pools.iter_mut().enumerate() {
         // we cannot put a zero amount into an empty pool.
         if deposits[i].is_zero() && pool.amount.is_zero() {
@@ -414,29 +407,28 @@ pub fn provide_liquidity(
     // Assert that slippage tolerance is respected
     assert_slippage_tolerance(&slippage_tolerance, &deposits, &pools)?;
 
-    let token_precision_0 = query_token_precision(&deps.querier, pools[0].info.clone())?;
-    let token_precision_1 = query_token_precision(&deps.querier, pools[1].info.clone())?;
+    let token_precision_0 = query_token_precision(&deps.querier, &pools[0].info)?;
+    let token_precision_1 = query_token_precision(&deps.querier, &pools[1].info)?;
 
     let greater_precision = token_precision_0.max(token_precision_1);
 
     let deposit_amount_0 = adjust_precision(deposits[0], token_precision_0, greater_precision)?;
     let deposit_amount_1 = adjust_precision(deposits[1], token_precision_1, greater_precision)?;
 
-    let total_share = query_supply(&deps.querier, config.pair_info.liquidity_token.clone())?;
+    let total_share = query_supply(&deps.querier, &config.pair_info.liquidity_token)?;
     let share = if total_share.is_zero() {
         let liquidity_token_precision = query_token_precision(
             &deps.querier,
-            AssetInfo::Token {
-                contract_addr: config.pair_info.liquidity_token.clone(),
-            },
+            &token_asset_info(config.pair_info.liquidity_token.clone()),
         )?;
 
         // Initial share = collateral amount
         adjust_precision(
-            (Uint256::from(deposit_amount_0.u128()) * Uint256::from(deposit_amount_1.u128()))
-                .isqrt()
-                .try_into()
-                .unwrap(),
+            Uint128::new(
+                (U256::from(deposit_amount_0.u128()) * U256::from(deposit_amount_1.u128()))
+                    .integer_sqrt()
+                    .as_u128(),
+            ),
             greater_precision,
             liquidity_token_precision,
         )?
@@ -475,12 +467,12 @@ pub fn provide_liquidity(
     }
 
     // Mint LP token for the caller (or for the receiver if it was set)
-    let receiver = receiver.unwrap_or_else(|| info.sender.to_string());
+    let receiver = addr_opt_validate(deps.api, &receiver)?.unwrap_or_else(|| info.sender.clone());
     messages.extend(mint_liquidity_token_message(
-        deps.as_ref(),
+        deps.querier,
         &config,
-        env.clone(),
-        addr_validate_to_lower(deps.api, receiver.as_str())?,
+        &env.contract.address,
+        &receiver,
         share,
         auto_stake,
     )?);
@@ -502,38 +494,39 @@ pub fn provide_liquidity(
 
     Ok(Response::new().add_messages(messages).add_attributes(vec![
         attr("action", "provide_liquidity"),
-        attr("sender", info.sender.as_str()),
-        attr("receiver", receiver.as_str()),
+        attr("sender", info.sender),
+        attr("receiver", receiver),
         attr("assets", format!("{}, {}", assets[0], assets[1])),
-        attr("share", share.to_string()),
+        attr("share", share),
     ]))
 }
 
 /// ## Description
-/// Mint LP tokens for a beneficiary and auto deposit them into the Generator contract (if requested).
+/// Mint LP tokens for a beneficiary and auto stake the tokens in the Generator contract (if auto staking is specified).
 /// # Params
-/// * **deps** is an object of type [`Deps`].
+/// * **querier** is an object of type [`QuerierWrapper`].
 ///
 /// * **config** is an object of type [`Config`].
 ///
-/// * **env** is an object of type [`Env`].
+/// * **contract_address** is an object of type [`Addr`].
 ///
 /// * **recipient** is an object of type [`Addr`]. This is the LP token recipient.
 ///
-/// * **amount** is an object of type [`Uint128`]. This is the amount of LP tokens to mint.
+/// * **amount** is an object of type [`Uint128`]. This is the amount of LP tokens that will be minted for the recipient.
 ///
-/// * **auto_stake** is a field of type [`bool`]. Determines whether or not LP tokens will be automatically staked in the Generator contract.
+/// * **auto_stake** is the field of type [`bool`]. Determines whether the newly minted LP tokens will
+/// be automatically staked in the Generator on behalf of the recipient.
 fn mint_liquidity_token_message(
-    deps: Deps<PalomaQueryWrapper>,
+    querier: QuerierWrapper,
     config: &Config,
-    env: Env,
-    recipient: Addr,
+    contract_address: &Addr,
+    recipient: &Addr,
     amount: Uint128,
     auto_stake: bool,
 ) -> Result<Vec<CosmosMsg>, ContractError> {
-    let lp_token = config.pair_info.liquidity_token.clone();
+    let lp_token = &config.pair_info.liquidity_token;
 
-    // If no auto-stake - just mint LP tokens for the recipient and return
+    // If no auto-stake - just mint to recipient
     if !auto_stake {
         return Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: lp_token.to_string(),
@@ -545,33 +538,32 @@ fn mint_liquidity_token_message(
         })]);
     }
 
-    // Mint for the contract and stake into the Generator
-    let generator =
-        query_factory_config(&deps.querier, config.clone().factory_addr)?.generator_address;
+    // Mint for the pair contract and stake into the Generator contract
+    let generator = query_factory_config(&querier, &config.factory_addr)?.generator_address;
 
-    if generator.is_none() {
-        return Err(ContractError::AutoStakeError {});
+    if let Some(generator) = generator {
+        Ok(vec![
+            CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: lp_token.to_string(),
+                msg: to_binary(&Cw20ExecuteMsg::Mint {
+                    recipient: contract_address.to_string(),
+                    amount,
+                })?,
+                funds: vec![],
+            }),
+            CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: lp_token.to_string(),
+                msg: to_binary(&Cw20ExecuteMsg::Send {
+                    contract: generator.to_string(),
+                    amount,
+                    msg: to_binary(&GeneratorHookMsg::DepositFor(recipient.clone()))?,
+                })?,
+                funds: vec![],
+            }),
+        ])
+    } else {
+        Err(ContractError::AutoStakeError {})
     }
-
-    Ok(vec![
-        CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: lp_token.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Mint {
-                recipient: env.contract.address.to_string(),
-                amount,
-            })?,
-            funds: vec![],
-        }),
-        CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: lp_token.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Send {
-                contract: generator.unwrap().to_string(),
-                amount,
-                msg: to_binary(&GeneratorHookMsg::DepositFor(recipient))?,
-            })?,
-            funds: vec![],
-        }),
-    ])
 }
 
 /// ## Description
@@ -588,19 +580,19 @@ fn mint_liquidity_token_message(
 ///
 /// * **amount** is an object of type [`Uint128`]. This is the amount of LP tokens to burn and withdraw liquidity with.
 pub fn withdraw_liquidity(
-    deps: DepsMut<PalomaQueryWrapper>,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     sender: Addr,
     amount: Uint128,
 ) -> Result<Response, ContractError> {
-    let mut config: Config = CONFIG.load(deps.storage).unwrap();
+    let mut config = CONFIG.load(deps.storage).unwrap();
 
     if info.sender != config.pair_info.liquidity_token {
         return Err(ContractError::Unauthorized {});
     }
 
-    let (pools, total_share) = pool_info(deps.as_ref(), config.clone())?;
+    let (pools, total_share) = pool_info(deps.querier, &config)?;
     let refund_assets = get_share_in_assets(&pools, amount, total_share);
 
     // Accumulate prices for the assets in the pool
@@ -608,9 +600,9 @@ pub fn withdraw_liquidity(
         env,
         &config,
         pools[0].amount,
-        query_token_precision(&deps.querier, pools[0].info.clone())?,
+        query_token_precision(&deps.querier, &pools[0].info)?,
         pools[1].amount,
-        query_token_precision(&deps.querier, pools[1].info.clone())?,
+        query_token_precision(&deps.querier, &pools[1].info)?,
     )? {
         config.price0_cumulative_last = price0_cumulative_new;
         config.price1_cumulative_last = price1_cumulative_new;
@@ -618,13 +610,9 @@ pub fn withdraw_liquidity(
         CONFIG.save(deps.storage, &config)?;
     }
 
-    let messages: Vec<CosmosMsg> = vec![
-        refund_assets[0]
-            .clone()
-            .into_msg(&deps.querier, sender.clone())?,
-        refund_assets[1]
-            .clone()
-            .into_msg(&deps.querier, sender.clone())?,
+    let messages = vec![
+        refund_assets[0].clone().into_msg(&deps.querier, &sender)?,
+        refund_assets[1].clone().into_msg(&deps.querier, &sender)?,
         CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: config.pair_info.liquidity_token.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,
@@ -632,19 +620,15 @@ pub fn withdraw_liquidity(
         }),
     ];
 
-    let attributes = vec![
+    Ok(Response::new().add_messages(messages).add_attributes(vec![
         attr("action", "withdraw_liquidity"),
-        attr("sender", sender.as_str()),
-        attr("withdrawn_share", &amount.to_string()),
+        attr("sender", sender),
+        attr("withdrawn_share", amount),
         attr(
             "refund_assets",
             format!("{}, {}", refund_assets[0], refund_assets[1]),
         ),
-    ];
-
-    Ok(Response::new()
-        .add_messages(messages)
-        .add_attributes(attributes))
+    ]))
 }
 
 /// ## Description
@@ -700,7 +684,7 @@ pub fn get_share_in_assets(
 /// NOTE - the address that wants to swap should approve the pair contract to pull the offer token.
 #[allow(clippy::too_many_arguments)]
 pub fn swap(
-    deps: DepsMut<PalomaQueryWrapper>,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     sender: Addr,
@@ -711,23 +695,21 @@ pub fn swap(
 ) -> Result<Response, ContractError> {
     offer_asset.assert_sent_native_token_balance(&info)?;
 
-    let mut config: Config = CONFIG.load(deps.storage)?;
+    let mut config = CONFIG.load(deps.storage)?;
 
     // If the asset balance already increased
     // We should subtract the user deposit from the pool offer asset amount
-    let pools: Vec<Asset> = config
+    let pools = config
         .pair_info
-        .query_pools(&deps.querier, env.clone().contract.address)?
-        .iter()
-        .map(|p| {
-            let mut p = p.clone();
+        .query_pools(&deps.querier, &env.contract.address)?
+        .into_iter()
+        .map(|mut p| {
             if p.info.equal(&offer_asset.info) {
-                p.amount = p.amount.checked_sub(offer_asset.amount).unwrap();
+                p.amount = p.amount.checked_sub(offer_asset.amount)?;
             }
-
-            p
+            Ok(p)
         })
-        .collect();
+        .collect::<StdResult<Vec<_>>>()?;
 
     let offer_pool: Asset;
     let ask_pool: Asset;
@@ -745,16 +727,17 @@ pub fn swap(
     // Get fee info from the factory
     let fee_info = query_fee_info(
         &deps.querier,
-        config.factory_addr.clone(),
+        &config.factory_addr,
         config.pair_info.pair_type.clone(),
     )?;
 
     let offer_amount = offer_asset.amount;
+
     let (return_amount, spread_amount, commission_amount) = compute_swap(
         offer_pool.amount,
-        query_token_precision(&deps.querier, offer_pool.info)?,
+        query_token_precision(&deps.querier, &offer_pool.info)?,
         ask_pool.amount,
-        query_token_precision(&deps.querier, ask_pool.info.clone())?,
+        query_token_precision(&deps.querier, &ask_pool.info)?,
         offer_amount,
         fee_info.total_fee_rate,
         compute_current_amp(&config, &env)?,
@@ -779,19 +762,16 @@ pub fn swap(
 
     let receiver = to.unwrap_or_else(|| sender.clone());
 
-    let mut messages: Vec<CosmosMsg> =
-        vec![return_asset.into_msg(&deps.querier, receiver.clone())?];
+    let mut messages = vec![return_asset.into_msg(&deps.querier, &receiver)?];
 
-    // Maker fee
-    let mut maker_fee_amount = Uint128::new(0);
+    // Compute the Maker fee
+    let mut maker_fee_amount = Uint128::zero();
     if let Some(fee_address) = fee_info.fee_address {
-        if let Some(f) = calculate_maker_fee(
-            ask_pool.info.clone(),
-            commission_amount,
-            fee_info.maker_fee_rate,
-        ) {
-            messages.push(f.clone().into_msg(&deps.querier, fee_address)?);
+        if let Some(f) =
+            calculate_maker_fee(&ask_pool.info, commission_amount, fee_info.maker_fee_rate)
+        {
             maker_fee_amount = f.amount;
+            messages.push(f.into_msg(&deps.querier, fee_address)?);
         }
     }
 
@@ -800,9 +780,9 @@ pub fn swap(
         env,
         &config,
         pools[0].amount,
-        query_token_precision(&deps.querier, pools[0].info.clone())?,
+        query_token_precision(&deps.querier, &pools[0].info)?,
         pools[1].amount,
-        query_token_precision(&deps.querier, pools[1].info.clone())?,
+        query_token_precision(&deps.querier, &pools[1].info)?,
     )? {
         config.price0_cumulative_last = price0_cumulative_new;
         config.price1_cumulative_last = price1_cumulative_new;
@@ -812,21 +792,23 @@ pub fn swap(
 
     Ok(Response::new()
         .add_messages(
-            // 1. send collateral token from the contract to a user
-            // 2. send inactive commission to collector
+            // 1. send collateral tokens from the contract to a user
+            // 2. send inactive commission fees to the Maker contract
             messages,
         )
-        .add_attribute("action", "swap")
-        .add_attribute("sender", sender.as_str())
-        .add_attribute("receiver", receiver.as_str())
-        .add_attribute("offer_asset", offer_asset.info.to_string())
-        .add_attribute("ask_asset", ask_pool.info.to_string())
-        .add_attribute("offer_amount", offer_amount.to_string())
-        .add_attribute("return_amount", return_amount.to_string())
-        .add_attribute("tax_amount", tax_amount.to_string())
-        .add_attribute("spread_amount", spread_amount.to_string())
-        .add_attribute("commission_amount", commission_amount.to_string())
-        .add_attribute("maker_fee_amount", maker_fee_amount.to_string()))
+        .add_attributes(vec![
+            attr("action", "swap"),
+            attr("sender", sender),
+            attr("receiver", receiver),
+            attr("offer_asset", offer_asset.info.to_string()),
+            attr("ask_asset", ask_pool.info.to_string()),
+            attr("offer_amount", offer_amount),
+            attr("return_amount", return_amount),
+            attr("tax_amount", tax_amount),
+            attr("spread_amount", spread_amount),
+            attr("commission_amount", commission_amount),
+            attr("maker_fee_amount", maker_fee_amount),
+        ]))
 }
 
 /// ## Description
@@ -911,7 +893,7 @@ pub fn accumulate_prices(
 ///
 /// * **maker_commission_rate** is an object of type [`MessageInfo`]. This is the percentage of fees that go to the Maker contract.
 pub fn calculate_maker_fee(
-    pool_info: AssetInfo,
+    pool_info: &AssetInfo,
     commission_amount: Uint128,
     maker_commission_rate: Decimal,
 ) -> Option<Asset> {
@@ -921,7 +903,7 @@ pub fn calculate_maker_fee(
     }
 
     Some(Asset {
-        info: pool_info,
+        info: pool_info.clone(),
         amount: maker_fee,
     })
 }
@@ -954,7 +936,7 @@ pub fn calculate_maker_fee(
 ///
 /// * **QueryMsg::Config {}** Returns the configuration for the pair contract using a [`ConfigResponse`] object.
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps<PalomaQueryWrapper>, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Pair {} => to_binary(&query_pair_info(deps)?),
         QueryMsg::Pool {} => to_binary(&query_pool(deps)?),
@@ -975,8 +957,8 @@ pub fn query(deps: Deps<PalomaQueryWrapper>, env: Env, msg: QueryMsg) -> StdResu
 /// Returns information about the pair contract in an object of type [`PairInfo`].
 /// ## Params
 /// * **deps** is an object of type [`Deps`].
-pub fn query_pair_info(deps: Deps<PalomaQueryWrapper>) -> StdResult<PairInfo> {
-    let config: Config = CONFIG.load(deps.storage)?;
+pub fn query_pair_info(deps: Deps) -> StdResult<PairInfo> {
+    let config = CONFIG.load(deps.storage)?;
     Ok(config.pair_info)
 }
 
@@ -985,9 +967,9 @@ pub fn query_pair_info(deps: Deps<PalomaQueryWrapper>) -> StdResult<PairInfo> {
 /// tokens currently minted in an object of type [`PoolResponse`].
 /// ## Params
 /// * **deps** is an object of type [`Deps`].
-pub fn query_pool(deps: Deps<PalomaQueryWrapper>) -> StdResult<PoolResponse> {
-    let config: Config = CONFIG.load(deps.storage)?;
-    let (assets, total_share) = pool_info(deps, config)?;
+pub fn query_pool(deps: Deps) -> StdResult<PoolResponse> {
+    let config = CONFIG.load(deps.storage)?;
+    let (assets, total_share) = pool_info(deps.querier, &config)?;
 
     let resp = PoolResponse {
         assets,
@@ -1004,9 +986,9 @@ pub fn query_pool(deps: Deps<PalomaQueryWrapper>) -> StdResult<PoolResponse> {
 /// * **deps** is an object of type [`Deps`].
 ///
 /// * **amount** is an object of type [`Uint128`]. This is the amount of LP tokens for which we calculate associated amounts of assets.
-pub fn query_share(deps: Deps<PalomaQueryWrapper>, amount: Uint128) -> StdResult<[Asset; 2]> {
-    let config: Config = CONFIG.load(deps.storage)?;
-    let (pools, total_share) = pool_info(deps, config)?;
+pub fn query_share(deps: Deps, amount: Uint128) -> StdResult<[Asset; 2]> {
+    let config = CONFIG.load(deps.storage)?;
+    let (pools, total_share) = pool_info(deps.querier, &config)?;
     let refund_assets = get_share_in_assets(&pools, amount, total_share);
 
     Ok(refund_assets)
@@ -1020,12 +1002,8 @@ pub fn query_share(deps: Deps<PalomaQueryWrapper>, amount: Uint128) -> StdResult
 /// * **env** is an object of type [`Env`].
 ///
 /// * **offer_asset** is an object of type [`Asset`]. This is the asset to swap as well as an amount of the said asset.
-pub fn query_simulation(
-    deps: Deps<PalomaQueryWrapper>,
-    env: Env,
-    offer_asset: Asset,
-) -> StdResult<SimulationResponse> {
-    let config: Config = CONFIG.load(deps.storage)?;
+pub fn query_simulation(deps: Deps, env: Env, offer_asset: Asset) -> StdResult<SimulationResponse> {
+    let config = CONFIG.load(deps.storage)?;
     let contract_addr = config.pair_info.contract_addr.clone();
 
     let pools: [Asset; 2] = config.pair_info.query_pools(&deps.querier, contract_addr)?;
@@ -1047,15 +1025,15 @@ pub fn query_simulation(
     // Get fee info from factory
     let fee_info = query_fee_info(
         &deps.querier,
-        config.factory_addr.clone(),
+        &config.factory_addr,
         config.pair_info.pair_type.clone(),
     )?;
 
     let (return_amount, spread_amount, commission_amount) = compute_swap(
         offer_pool.amount,
-        query_token_precision(&deps.querier, offer_pool.info)?,
+        query_token_precision(&deps.querier, &offer_pool.info)?,
         ask_pool.amount,
-        query_token_precision(&deps.querier, ask_pool.info)?,
+        query_token_precision(&deps.querier, &ask_pool.info)?,
         offer_asset.amount,
         fee_info.total_fee_rate,
         compute_current_amp(&config, &env)?,
@@ -1078,14 +1056,14 @@ pub fn query_simulation(
 /// * **ask_asset** is an object of type [`Asset`]. This is the asset to swap to as well as the desired
 /// amount of ask assets to receive from the swap.
 pub fn query_reverse_simulation(
-    deps: Deps<PalomaQueryWrapper>,
+    deps: Deps,
     env: Env,
     ask_asset: Asset,
 ) -> StdResult<ReverseSimulationResponse> {
-    let config: Config = CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     let contract_addr = config.pair_info.contract_addr.clone();
 
-    let pools: [Asset; 2] = config.pair_info.query_pools(&deps.querier, contract_addr)?;
+    let pools = config.pair_info.query_pools(&deps.querier, contract_addr)?;
 
     let offer_pool: Asset;
     let ask_pool: Asset;
@@ -1104,15 +1082,15 @@ pub fn query_reverse_simulation(
     // Get fee info from the factory
     let fee_info = query_fee_info(
         &deps.querier,
-        config.factory_addr.clone(),
+        &config.factory_addr,
         config.pair_info.pair_type.clone(),
     )?;
 
     let (offer_amount, spread_amount, commission_amount) = compute_offer_amount(
         offer_pool.amount,
-        query_token_precision(&deps.querier, offer_pool.info)?,
+        query_token_precision(&deps.querier, &offer_pool.info)?,
         ask_pool.amount,
-        query_token_precision(&deps.querier, ask_pool.info)?,
+        query_token_precision(&deps.querier, &ask_pool.info)?,
         ask_asset.amount,
         fee_info.total_fee_rate,
         compute_current_amp(&config, &env)?,
@@ -1131,12 +1109,9 @@ pub fn query_reverse_simulation(
 /// * **deps** is an object of type [`Deps`].
 ///
 /// * **env** is an object of type [`Env`].
-pub fn query_cumulative_prices(
-    deps: Deps<PalomaQueryWrapper>,
-    env: Env,
-) -> StdResult<CumulativePricesResponse> {
-    let config: Config = CONFIG.load(deps.storage)?;
-    let (assets, total_share) = pool_info(deps, config.clone())?;
+pub fn query_cumulative_prices(deps: Deps, env: Env) -> StdResult<CumulativePricesResponse> {
+    let config = CONFIG.load(deps.storage)?;
+    let (assets, total_share) = pool_info(deps.querier, &config)?;
 
     let mut price0_cumulative_last = config.price0_cumulative_last;
     let mut price1_cumulative_last = config.price1_cumulative_last;
@@ -1145,9 +1120,9 @@ pub fn query_cumulative_prices(
         env,
         &config,
         assets[0].amount,
-        query_token_precision(&deps.querier, assets[0].info.clone())?,
+        query_token_precision(&deps.querier, &assets[0].info)?,
         assets[1].amount,
-        query_token_precision(&deps.querier, assets[1].info.clone())?,
+        query_token_precision(&deps.querier, &assets[1].info)?,
     )? {
         price0_cumulative_last = price0_cumulative_new;
         price1_cumulative_last = price1_cumulative_new;
@@ -1167,8 +1142,8 @@ pub fn query_cumulative_prices(
 /// Returns the pair contract configuration in a [`ConfigResponse`] object.
 /// ## Params
 /// * **deps** is an object of type [`Deps`].
-pub fn query_config(deps: Deps<PalomaQueryWrapper>, env: Env) -> StdResult<ConfigResponse> {
-    let config: Config = CONFIG.load(deps.storage)?;
+pub fn query_config(deps: Deps, env: Env) -> StdResult<ConfigResponse> {
+    let config = CONFIG.load(deps.storage)?;
     Ok(ConfigResponse {
         block_time_last: config.block_time_last,
         params: Some(to_binary(&StablePoolConfig {
@@ -1193,7 +1168,7 @@ pub fn query_config(deps: Deps<PalomaQueryWrapper>, env: Env) -> StdResult<Confi
 /// * **commission_rate** is an object of type [`Decimal`]. This is the total amount of fees charged for the swap.
 ///
 /// * **amp** is an object of type [`u64`]. This is the pool amplification used to calculate the swap result.
-fn compute_swap(
+pub fn compute_swap(
     offer_pool: Uint128,
     offer_precision: u8,
     ask_pool: Uint128,
@@ -1203,6 +1178,7 @@ fn compute_swap(
     amp: u64,
 ) -> StdResult<(Uint128, Uint128, Uint128)> {
     // offer => ask
+    check_swap_parameters(offer_pool, ask_pool, offer_amount)?;
 
     let greater_precision = offer_precision.max(ask_precision);
     let offer_pool = adjust_precision(offer_pool, offer_precision, greater_precision)?;
@@ -1242,7 +1218,7 @@ fn compute_swap(
 /// * **ask_amount** is an object of type [`Uint128`]. This is the amount of ask assets to swap to.
 ///
 /// * **commission_rate** is an object of type [`Decimal`]. This is the total amount of fees charged for the swap.
-fn compute_offer_amount(
+pub fn compute_offer_amount(
     offer_pool: Uint128,
     offer_precision: u8,
     ask_pool: Uint128,
@@ -1252,14 +1228,15 @@ fn compute_offer_amount(
     amp: u64,
 ) -> StdResult<(Uint128, Uint128, Uint128)> {
     // ask => offer
+    check_swap_parameters(offer_pool, ask_pool, ask_amount)?;
 
     let greater_precision = offer_precision.max(ask_precision);
     let offer_pool = adjust_precision(offer_pool, offer_precision, greater_precision)?;
     let ask_pool = adjust_precision(ask_pool, ask_precision, greater_precision)?;
     let ask_amount = adjust_precision(ask_amount, ask_precision, greater_precision)?;
 
-    let one_minus_commission = Decimal256::one() - to_decimal256(commission_rate);
-    let inv_one_minus_commission: Decimal = to_decimal(Decimal256::one() / one_minus_commission);
+    let one_minus_commission = Decimal::one() - commission_rate;
+    let inv_one_minus_commission = Decimal::one() / one_minus_commission;
     let before_commission_deduction = ask_amount * inv_one_minus_commission;
 
     let offer_amount = Uint128::new(
@@ -1339,8 +1316,13 @@ pub fn assert_max_spread(
     }
 
     if let Some(belief_price) = belief_price {
-        let expected_return =
-            offer_amount * to_decimal(Decimal256::one() / to_decimal256(belief_price));
+        let expected_return = offer_amount
+            * belief_price.inv().ok_or_else(|| {
+                ContractError::Std(StdError::generic_err(
+                    "Invalid belief_price. Check the input values.",
+                ))
+            })?;
+
         let spread_amount = expected_return
             .checked_sub(return_amount)
             .unwrap_or_else(|_| Uint128::zero());
@@ -1389,18 +1371,16 @@ pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Respons
 }
 
 /// ## Description
-/// Returns information about the pool.
+/// Returns the total amount of assets in the pool as well as the total amount of LP tokens currently minted.
 /// ## Params
-/// * **deps** is an object of type [`Deps`].
+/// * **querier** is an object of type [`QuerierWrapper`].
 ///
 /// * **config** is an object of type [`Config`].
-pub fn pool_info(
-    deps: Deps<PalomaQueryWrapper>,
-    config: Config,
-) -> StdResult<([Asset; 2], Uint128)> {
-    let contract_addr = config.pair_info.contract_addr.clone();
-    let pools: [Asset; 2] = config.pair_info.query_pools(&deps.querier, contract_addr)?;
-    let total_share: Uint128 = query_supply(&deps.querier, config.pair_info.liquidity_token)?;
+pub fn pool_info(querier: QuerierWrapper, config: &Config) -> StdResult<([Asset; 2], Uint128)> {
+    let pools = config
+        .pair_info
+        .query_pools(&querier, &config.pair_info.contract_addr)?;
+    let total_share = query_supply(&querier, &config.pair_info.liquidity_token)?;
 
     Ok((pools, total_share))
 }
@@ -1418,13 +1398,13 @@ pub fn pool_info(
 ///
 /// * **params** is an object of type [`Binary`]. These are the the new parameter values.
 pub fn update_config(
-    deps: DepsMut<PalomaQueryWrapper>,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     params: Binary,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
-    let factory_config = query_factory_config(&deps.querier, config.factory_addr.clone())?;
+    let factory_config = query_factory_config(&deps.querier, &config.factory_addr)?;
 
     if info.sender != factory_config.owner {
         return Err(ContractError::Unauthorized {});
@@ -1455,7 +1435,7 @@ pub fn update_config(
 /// * **next_amp_time** is an object of type [`u64`]. This is the end time when the pool amplification will be equal to `next_amp`.
 fn start_changing_amp(
     mut config: Config,
-    deps: DepsMut<PalomaQueryWrapper>,
+    deps: DepsMut,
     env: Env,
     next_amp: u64,
     next_amp_time: u64,
@@ -1500,11 +1480,7 @@ fn start_changing_amp(
 /// * **deps** is an object of type [`DepsMut`].
 ///
 /// * **env** is an object of type [`Env`].
-fn stop_changing_amp(
-    mut config: Config,
-    deps: DepsMut<PalomaQueryWrapper>,
-    env: Env,
-) -> StdResult<()> {
+fn stop_changing_amp(mut config: Config, deps: DepsMut, env: Env) -> StdResult<()> {
     let current_amp = compute_current_amp(&config, &env)?;
     let block_time = env.block.time.seconds();
 
@@ -1556,7 +1532,7 @@ fn compute_current_amp(config: &Config, env: &Env) -> StdResult<u64> {
 /// * **deps** is an object of type [`Deps`].
 ///
 /// * **env** is an object of type [`Env`].
-fn query_compute_d(deps: Deps<PalomaQueryWrapper>, env: Env) -> StdResult<u128> {
+fn query_compute_d(deps: Deps, env: Env) -> StdResult<u128> {
     let config = CONFIG.load(deps.storage)?;
 
     let amp = compute_current_amp(&config, &env)?;

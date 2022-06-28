@@ -1,8 +1,9 @@
 use std::env::current_dir;
 use std::fs::create_dir_all;
 
-use astroport::xastro_token::{InstantiateMsg, QueryMsg};
 use cosmwasm_schema::{export_schema_with_title, remove_schemas, schema_for};
+
+use astroport::xastro_token::{InstantiateMsg, QueryMsg};
 use cw20::{
     AllAccountsResponse, AllAllowancesResponse, AllowanceResponse, BalanceResponse, MinterResponse,
     TokenInfoResponse,

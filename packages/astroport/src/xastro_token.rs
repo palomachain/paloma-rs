@@ -1,10 +1,11 @@
-use cosmwasm_std::{StdError, StdResult, Uint128};
-use cw20::{Cw20Coin, MinterResponse};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use cosmwasm_std::{StdError, StdResult, Uint128};
+use cw20::{Cw20Coin, MinterResponse};
+
 /// This structure describes the parameters used for creating a xASTRO token contract.
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
 pub struct InstantiateMsg {
     /// Token name
     pub name: String,

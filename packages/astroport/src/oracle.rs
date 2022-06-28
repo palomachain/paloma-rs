@@ -1,8 +1,7 @@
+use crate::asset::AssetInfo;
 use cosmwasm_std::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use crate::asset::AssetInfo;
 
 /// This structure stores general parameters for the contract.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

@@ -1,11 +1,13 @@
-use astroport::asset::AssetInfo;
-use astroport::common::OwnershipProposal;
-use astroport::factory::PairConfig;
-use cosmwasm_std::{Addr, Deps, Order};
 use cw_storage_plus::{Bound, Item, Map};
-use paloma_cosmwasm::PalomaQueryWrapper;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use cosmwasm_std::{Addr, Deps, Order, StdResult};
+
+use astroport::asset::AssetInfo;
+
+use astroport::common::OwnershipProposal;
+use astroport::factory::PairConfig;
 
 /// ## Description
 /// This structure holds the main contract parameters.
@@ -65,24 +67,38 @@ const DEFAULT_LIMIT: u32 = 10;
 /// ## Params
 /// `start_after` is the pair from which the function starts to fetch results. It is an [`Option`].
 ///
-/// `limit` is the number of items to retreive. It is an [`Option`].
+/// `limit` is the number of items to retrieve. It is an [`Option`].
 pub fn read_pairs(
-    deps: Deps<PalomaQueryWrapper>,
+    deps: Deps,
     start_after: Option<[AssetInfo; 2]>,
     limit: Option<u32>,
-) -> Vec<Addr> {
+) -> StdResult<Vec<Addr>> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start = calc_range_start(start_after);
-    let start = start.as_deref().map(Bound::exclusive);
 
-    PAIRS
-        .range(deps.storage, start, None, Order::Ascending)
-        .take(limit)
-        .map(|item| {
-            let (_, pair_addr) = item.unwrap();
-            pair_addr
-        })
-        .collect()
+    if let Some(start) = calc_range_start(start_after) {
+        PAIRS
+            .range(
+                deps.storage,
+                Some(Bound::exclusive(start.as_slice())),
+                None,
+                Order::Ascending,
+            )
+            .take(limit)
+            .map(|item| {
+                let (_, pair_addr) = item?;
+                Ok(pair_addr)
+            })
+            .collect()
+    } else {
+        PAIRS
+            .range(deps.storage, None, None, Order::Ascending)
+            .take(limit)
+            .map(|item| {
+                let (_, pair_addr) = item?;
+                Ok(pair_addr)
+            })
+            .collect()
+    }
 }
 
 /// ## Description
@@ -91,11 +107,16 @@ pub fn read_pairs(
 /// `start_after` is an [`Option`] type that accepts two [`AssetInfo`] elements.
 /// It is the token pair which we use to determine the start index for a range when returning data for multiple pairs
 fn calc_range_start(start_after: Option<[AssetInfo; 2]>) -> Option<Vec<u8>> {
-    start_after.map(|mut asset_infos| {
+    start_after.map(|asset_infos| {
+        let mut asset_infos = asset_infos.to_vec();
         asset_infos.sort_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
-        [asset_infos[0].as_bytes(), asset_infos[1].as_bytes(), &[1]]
+
+        let mut v = [asset_infos[0].as_bytes(), asset_infos[1].as_bytes()]
             .concat()
-            .to_vec()
+            .as_slice()
+            .to_vec();
+        v.push(1);
+        v
     })
 }
 

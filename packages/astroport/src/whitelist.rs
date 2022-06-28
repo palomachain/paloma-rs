@@ -1,10 +1,10 @@
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
 use cosmwasm_std::{CosmosMsg, Empty};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub admins: Vec<String>,
     pub mutable: bool,

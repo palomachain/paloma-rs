@@ -80,8 +80,7 @@ mod tests {
     use super::*;
 
     use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
-    use cosmwasm_std::Api;
-    use cosmwasm_std::{coins, DepsMut, Uint128};
+    use cosmwasm_std::{coins, Api, DepsMut, Uint128};
     use cw20::{Cw20Coin, Expiration, TokenInfoResponse};
 
     use crate::contract::{execute, instantiate, query_token_info};

@@ -1,10 +1,8 @@
-use std::fmt::Display;
-
+use crate::DecimalCheckedOps;
 use cosmwasm_std::{Decimal, StdError, StdResult, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use crate::DecimalCheckedOps;
+use std::fmt::Display;
 
 /// Vec wrapper for internal use.
 /// Some business logic relies on an order of this vector, thus it is forbidden to sort it

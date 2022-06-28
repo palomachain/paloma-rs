@@ -1,23 +1,15 @@
 use anyhow::{anyhow, Result};
 use assert_matches::assert_matches;
 use astroport::whitelist::{AdminListResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-use cosmwasm_std::testing::{mock_env, MockApi, MockStorage};
 use cosmwasm_std::{to_binary, Addr, CosmosMsg, Empty, QueryRequest, StdError, WasmMsg, WasmQuery};
 use cw1::Cw1Contract;
-use cw_multi_test::{
-    App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor,
-};
+use cw_multi_test::{App, AppResponse, Contract, ContractWrapper, Executor};
 use derivative::Derivative;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 fn mock_app() -> App {
-    AppBuilder::new()
-        .with_api(MockApi::default())
-        .with_block(mock_env().block)
-        .with_bank(BankKeeper::new())
-        .with_storage(MockStorage::new())
-        .build(|_, _, _| {})
+    App::default()
 }
 
 fn contract_cw1() -> Box<dyn Contract<Empty>> {

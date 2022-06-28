@@ -1,24 +1,10 @@
-use std::str::FromStr;
-
-use astroport::maker::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-use cosmwasm_std::testing::{
-    mock_env, mock_info, MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR,
-};
-use cosmwasm_std::{from_binary, Addr, Decimal, OwnedDeps, Uint128, Uint64};
-use paloma_cosmwasm::PalomaQueryWrapper;
+use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+use cosmwasm_std::{from_binary, Addr, Decimal, Uint128, Uint64};
 
 use crate::contract::{execute, instantiate, query};
 use crate::state::{Config, CONFIG};
-
-/// mock_dependencies is a drop-in replacement for cosmwasm_std::testing::mock_dependencies.
-fn mock_dependencies() -> OwnedDeps<MockStorage, MockApi, MockQuerier, PalomaQueryWrapper> {
-    OwnedDeps {
-        storage: Default::default(),
-        api: Default::default(),
-        querier: MockQuerier::new(&[(MOCK_CONTRACT_ADDR, &[])]),
-        custom_query_type: Default::default(),
-    }
-}
+use astroport::maker::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
+use std::str::FromStr;
 
 #[test]
 fn proper_initialization() {

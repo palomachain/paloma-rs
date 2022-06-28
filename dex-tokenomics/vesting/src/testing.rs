@@ -1,8 +1,8 @@
+use crate::contract::{instantiate, query};
 use astroport::vesting::{ConfigResponse, InstantiateMsg, QueryMsg};
+
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{from_binary, Addr};
-
-use crate::contract::{instantiate, query};
 
 #[test]
 fn proper_initialization() {

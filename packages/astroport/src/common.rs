@@ -1,10 +1,8 @@
-use cosmwasm_std::{attr, Addr, DepsMut, Env, MessageInfo, Response, StdError, StdResult};
+use crate::asset::addr_validate_to_lower;
+use cosmwasm_std::{attr, Addr, Api, DepsMut, Env, MessageInfo, Response, StdError, StdResult};
 use cw_storage_plus::Item;
-use paloma_cosmwasm::PalomaQueryWrapper;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use crate::asset::addr_validate_to_lower;
 
 const MAX_PROPOSAL_TTL: u64 = 1209600;
 
@@ -36,7 +34,7 @@ pub struct OwnershipProposal {
 ///
 /// `proposal` is an object of type [`OwnershipProposal`].
 pub fn propose_new_owner(
-    deps: DepsMut<PalomaQueryWrapper>,
+    deps: DepsMut,
     info: MessageInfo,
     env: Env,
     new_owner: String,
@@ -90,7 +88,7 @@ pub fn propose_new_owner(
 ///
 /// `proposal` is the object of type [`OwnershipProposal`].
 pub fn drop_ownership_proposal(
-    deps: DepsMut<PalomaQueryWrapper>,
+    deps: DepsMut,
     info: MessageInfo,
     owner: Addr,
     proposal: Item<OwnershipProposal>,
@@ -120,11 +118,11 @@ pub fn drop_ownership_proposal(
 ///
 /// `cb` is a callback function that takes in two parameters of type [`DepsMut`] and [`Addr`] respectively.
 pub fn claim_ownership(
-    deps: DepsMut<PalomaQueryWrapper>,
+    deps: DepsMut,
     info: MessageInfo,
     env: Env,
     proposal: Item<OwnershipProposal>,
-    cb: fn(DepsMut<PalomaQueryWrapper>, Addr) -> StdResult<()>,
+    cb: fn(DepsMut, Addr) -> StdResult<()>,
 ) -> StdResult<Response> {
     let p: OwnershipProposal = proposal
         .load(deps.storage)
@@ -148,4 +146,14 @@ pub fn claim_ownership(
         attr("action", "claim_ownership"),
         attr("new_owner", p.owner),
     ]))
+}
+
+/// ## Description
+/// Bulk validation and conversion between [`String`] -> [`Addr`] for an array of addresses.
+/// If any address is invalid, the function returns [`StdError`].
+pub fn validate_addresses(api: &dyn Api, admins: &[String]) -> StdResult<Vec<Addr>> {
+    admins
+        .iter()
+        .map(|addr| addr_validate_to_lower(api, addr))
+        .collect()
 }

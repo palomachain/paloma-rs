@@ -10,6 +10,8 @@ exclude = [
     "hash.txt",
 ]
 
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -20,13 +22,17 @@ backtraces = ["cosmwasm-std/backtraces"]
 [dependencies]
 astroport = { path = "../../packages/astroport", default-features = false }
 cosmwasm-std = "1.0.0"
-cw-storage-plus = "0.13.2"
-cw2 = "0.13.2"
-cw20 = "0.13.2"
-paloma-cosmwasm = { path = "../../packages/paloma_cosmwasm" }
+cw-storage-plus = "0.13.4"
+cw2 = "0.13.4"
+cw20 = "0.13.4"
 schemars = "0.8.10"
 serde = { version = "1.0.137", default-features = false, features = ["derive"] }
 thiserror = "1.0.31"
 
 [dev-dependencies]
+astroport-factory = {path = "../factory" }
+astroport-pair = {path = "../pair" }
+astroport-pair-stable = {path = "../pair_stable" }
+astroport-token = {path = "../token" }
 cosmwasm-schema = "1.0.0"
+cw-multi-test = "0.13.4"

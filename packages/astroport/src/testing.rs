@@ -1,14 +1,14 @@
-use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
-use cosmwasm_std::{to_binary, Addr, BankMsg, Coin, CosmosMsg, Decimal, Uint128, WasmMsg};
-use cw20::Cw20ExecuteMsg;
-
 use crate::asset::{format_lp_token_name, Asset, AssetInfo, PairInfo};
-use crate::factory::PairType;
 use crate::mock_querier::mock_dependencies;
 use crate::querier::{
     query_all_balances, query_balance, query_pair_info, query_supply, query_token_balance,
 };
+
+use crate::factory::PairType;
 use crate::DecimalCheckedOps;
+use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
+use cosmwasm_std::{to_binary, Addr, BankMsg, Coin, CosmosMsg, Decimal, Uint128, WasmMsg};
+use cw20::Cw20ExecuteMsg;
 
 #[test]
 fn token_balance_querier() {
@@ -109,18 +109,18 @@ fn test_asset_info() {
         denom: "uusd".to_string(),
     };
 
-    assert_ne!(token_info, native_token_info);
+    assert_ne!(&token_info, &native_token_info);
 
     assert_ne!(
-        token_info,
-        AssetInfo::Token {
+        &token_info,
+        &AssetInfo::Token {
             contract_addr: Addr::unchecked("asset0001"),
         }
     );
 
     assert_eq!(
-        token_info,
-        AssetInfo::Token {
+        &token_info,
+        &AssetInfo::Token {
             contract_addr: Addr::unchecked("asset0000"),
         }
     );
@@ -174,11 +174,6 @@ fn test_asset() {
         ],
     )]);
 
-    deps.querier.with_tax(
-        Decimal::percent(1),
-        &[(&"uusd".to_string(), &Uint128::new(1000000u128))],
-    );
-
     let token_asset = Asset {
         amount: Uint128::new(123123u128),
         info: AssetInfo::Token {
@@ -201,7 +196,7 @@ fn test_asset() {
         native_token_asset
             .compute_tax(&deps.as_ref().querier)
             .unwrap(),
-        Uint128::new(1220u128)
+        Uint128::zero()
     );
 
     assert_eq!(
@@ -210,7 +205,7 @@ fn test_asset() {
             .unwrap(),
         Coin {
             denom: "uusd".to_string(),
-            amount: Uint128::new(121903u128),
+            amount: Uint128::new(123123u128),
         }
     );
 
@@ -237,7 +232,7 @@ fn test_asset() {
             to_address: String::from("addr0000"),
             amount: vec![Coin {
                 denom: "uusd".to_string(),
-                amount: Uint128::new(121903u128),
+                amount: Uint128::new(123123u128),
             }]
         })
     );
@@ -323,7 +318,7 @@ fn test_format_lp_token_name() {
 
     deps.querier.with_cw20_query_handler();
 
-    let lp_name = format_lp_token_name(pair_info.asset_infos, &deps.as_ref().querier).unwrap();
+    let lp_name = format_lp_token_name(&pair_info.asset_infos, &deps.as_ref().querier).unwrap();
     assert_eq!(lp_name, "MAPP-UUSD-LP")
 }
 
@@ -343,12 +338,12 @@ fn test_decimal_checked_ops() {
         let dec = Decimal::from_ratio(i, 1u128);
         assert_eq!(
             dec * Uint128::new(i),
-            DecimalCheckedOps::checked_mul_u128(dec, Uint128::new(i)).unwrap()
+            dec.checked_mul_uint128(Uint128::from(i)).unwrap()
         );
     }
-    assert!(DecimalCheckedOps::checked_mul_u128(
-        Decimal::from_ratio(Uint128::MAX, Uint128::from(10u128.pow(18u32))),
-        Uint128::from(10u128.pow(18u32) + 1)
-    )
-    .is_err());
+    assert!(
+        Decimal::from_ratio(Uint128::MAX, Uint128::from(10u128.pow(18u32)))
+            .checked_mul(Decimal::new(Uint128::from(10u128.pow(18u32) + 1u128)))
+            .is_err()
+    );
 }

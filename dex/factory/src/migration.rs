@@ -1,10 +1,9 @@
+use crate::state::PAIR_CONFIGS;
 use astroport::factory::{PairConfig, PairType};
 use cosmwasm_std::{Addr, StdError, Storage};
 use cw_storage_plus::{Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use crate::state::PAIR_CONFIGS;
 
 /// This structure describes a contract migration message.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -47,9 +46,9 @@ pub struct PairConfigV110 {
 pub const PAIR_CONFIGSV110: Map<String, PairConfigV110> = Map::new("pair_configs");
 
 pub fn migrate_pair_configs_to_v120(storage: &mut dyn Storage) -> Result<(), StdError> {
-    let keys: Vec<String> = PAIR_CONFIGSV110
+    let keys = PAIR_CONFIGSV110
         .keys(storage, None, None, cosmwasm_std::Order::Ascending {})
-        .collect::<Result<_, StdError>>()?;
+        .collect::<Result<Vec<String>, StdError>>()?;
 
     for key in keys {
         let pair_configs_v110 = PAIR_CONFIGSV110.load(storage, key.clone())?;

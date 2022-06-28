@@ -1,10 +1,10 @@
+use crate::contract::{execute, instantiate};
+use crate::mock_querier::mock_dependencies;
 use astroport::asset::{Asset, AssetInfo};
 use astroport::oracle::{ExecuteMsg, InstantiateMsg};
 use cosmwasm_std::testing::{mock_env, mock_info};
 use cosmwasm_std::{Addr, Decimal256, Uint128, Uint256};
-
-use crate::contract::{execute, instantiate};
-use crate::mock_querier::mock_dependencies;
+use std::ops::Mul;
 
 #[test]
 fn decimal_overflow() {
@@ -16,8 +16,11 @@ fn decimal_overflow() {
         Uint256::from(price_cumulative_current.wrapping_sub(price_cumulative_last)),
         time_elapsed,
     );
+
     println!("{}", price_average);
-    println!("{}", price_average * Uint256::from(amount));
+
+    let res: Uint128 = price_average.mul(Uint256::from(amount)).try_into().unwrap();
+    println!("{}", res);
 }
 
 #[test]

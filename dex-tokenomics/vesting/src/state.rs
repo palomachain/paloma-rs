@@ -1,9 +1,10 @@
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+
 use astroport::common::OwnershipProposal;
 use astroport::vesting::{OrderBy, VestingInfo};
 use cosmwasm_std::{Addr, Deps, StdResult};
 use cw_storage_plus::{Bound, Item, Map};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
 /// ## Description
 /// This structure stores the main parameters for the generator vesting contract.
@@ -50,12 +51,13 @@ pub fn read_vesting_infos(
 ) -> StdResult<Vec<(Addr, VestingInfo)>> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
     let start_after = start_after.as_ref().map(Bound::exclusive);
+
     let (start, end) = match &order_by {
         Some(OrderBy::Asc) => (start_after, None),
         _ => (None, start_after),
     };
 
-    let info: Vec<_> = VESTING_INFO
+    let info: Vec<(Addr, VestingInfo)> = VESTING_INFO
         .range(
             deps.storage,
             start,

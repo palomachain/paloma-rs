@@ -1,30 +1,34 @@
-use std::collections::HashSet;
-
-use astroport::asset::{addr_validate_to_lower, AssetInfo, PairInfo};
-use astroport::common::{claim_ownership, drop_ownership_proposal, propose_new_owner};
-use astroport::factory::{
-    ConfigResponse, ExecuteMsg, FeeInfoResponse, InstantiateMsg, MigrateMsg, PairConfig, PairType,
-    PairsResponse, QueryMsg,
-};
-use astroport::generator::ExecuteMsg::DeactivatePool;
-use astroport::pair::InstantiateMsg as PairInstantiateMsg;
 use cosmwasm_std::{
     attr, entry_point, from_binary, to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env,
     MessageInfo, Order, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, WasmMsg,
 };
-use cw2::{get_contract_version, set_contract_version};
-use paloma_cosmwasm::PalomaQueryWrapper;
-use protobuf::Message;
 
 use crate::error::ContractError;
 use crate::migration;
-use crate::migration::migrate_pair_configs_to_v120;
 use crate::querier::query_pair_info;
-use crate::response::MsgInstantiateContractResponse;
+
 use crate::state::{
     pair_key, read_pairs, Config, TmpPairInfo, CONFIG, OWNERSHIP_PROPOSAL, PAIRS, PAIRS_TO_MIGRATE,
     PAIR_CONFIGS, TMP_PAIR_INFO,
 };
+
+use crate::response::MsgInstantiateContractResponse;
+
+use astroport::asset::{addr_opt_validate, addr_validate_to_lower, AssetInfo, PairInfo};
+use astroport::factory::{
+    ConfigResponse, ExecuteMsg, FeeInfoResponse, InstantiateMsg, MigrateMsg, PairConfig, PairType,
+    PairsResponse, QueryMsg,
+};
+
+use crate::migration::migrate_pair_configs_to_v120;
+use astroport::common::{
+    claim_ownership, drop_ownership_proposal, propose_new_owner, validate_addresses,
+};
+use astroport::generator::ExecuteMsg::DeactivatePool;
+use astroport::pair::InstantiateMsg as PairInstantiateMsg;
+use cw2::{get_contract_version, set_contract_version};
+use protobuf::Message;
+use std::collections::HashSet;
 
 /// Contract name that is used for migration.
 const CONTRACT_NAME: &str = "astroport-factory";
@@ -46,7 +50,7 @@ const INSTANTIATE_PAIR_REPLY_ID: u64 = 1;
 /// * **msg**  is a message of type [`InstantiateMsg`] which contains the parameters used for creating the contract.
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut<PalomaQueryWrapper>,
+    deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
@@ -61,16 +65,9 @@ pub fn instantiate(
         whitelist_code_id: msg.whitelist_code_id,
     };
 
-    if let Some(generator_address) = msg.generator_address {
-        config.generator_address = Some(addr_validate_to_lower(
-            deps.api,
-            generator_address.as_str(),
-        )?);
-    }
+    config.generator_address = addr_opt_validate(deps.api, &msg.generator_address)?;
 
-    if let Some(fee_address) = msg.fee_address {
-        config.fee_address = Some(addr_validate_to_lower(deps.api, fee_address.as_str())?);
-    }
+    config.fee_address = addr_opt_validate(deps.api, &msg.fee_address)?;
 
     let config_set: HashSet<String> = msg
         .pair_configs
@@ -87,7 +84,7 @@ pub fn instantiate(
         if !pc.valid_fee_bps() {
             return Err(ContractError::PairConfigInvalidFeeBps {});
         }
-        PAIR_CONFIGS.save(deps.storage, pc.clone().pair_type.to_string(), pc)?;
+        PAIR_CONFIGS.save(deps.storage, pc.pair_type.to_string(), pc)?;
     }
     CONFIG.save(deps.storage, &config)?;
 
@@ -146,7 +143,7 @@ pub struct UpdateConfig {
 /// * **ExecuteMsg::MarkAsMigrated {}** Mark pairs as migrated.
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut<PalomaQueryWrapper>,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -159,7 +156,6 @@ pub fn execute(
             whitelist_code_id,
         } => execute_update_config(
             deps,
-            env,
             info,
             UpdateConfig {
                 token_code_id,
@@ -176,7 +172,7 @@ pub fn execute(
         } => execute_create_pair(deps, env, pair_type, asset_infos, init_params),
         ExecuteMsg::Deregister { asset_infos } => deregister(deps, info, asset_infos),
         ExecuteMsg::ProposeNewOwner { owner, expires_in } => {
-            let config: Config = CONFIG.load(deps.storage)?;
+            let config = CONFIG.load(deps.storage)?;
 
             propose_new_owner(
                 deps,
@@ -187,34 +183,31 @@ pub fn execute(
                 config.owner,
                 OWNERSHIP_PROPOSAL,
             )
-            .map_err(|e| e.into())
+            .map_err(Into::into)
         }
         ExecuteMsg::DropOwnershipProposal {} => {
-            let config: Config = CONFIG.load(deps.storage)?;
+            let config = CONFIG.load(deps.storage)?;
 
             drop_ownership_proposal(deps, info, config.owner, OWNERSHIP_PROPOSAL)
-                .map_err(|e| e.into())
+                .map_err(Into::into)
         }
         ExecuteMsg::ClaimOwnership {} => {
             let pairs = PAIRS
                 .range(deps.storage, None, None, Order::Ascending)
-                .map(|pair| -> StdResult<Addr> {
-                    let (_, addr) = pair?;
-                    Ok(addr)
-                })
-                .collect::<Result<Vec<Addr>, StdError>>()?;
+                .map(|pair| -> StdResult<Addr> { Ok(pair?.1) })
+                .collect::<StdResult<Vec<_>>>()?;
 
             PAIRS_TO_MIGRATE.save(deps.storage, &pairs)?;
 
             claim_ownership(deps, info, env, OWNERSHIP_PROPOSAL, |deps, new_owner| {
-                CONFIG.update::<_, StdError>(deps.storage, |mut v| {
-                    v.owner = new_owner;
-                    Ok(v)
-                })?;
-
-                Ok(())
+                CONFIG
+                    .update::<_, StdError>(deps.storage, |mut v| {
+                        v.owner = new_owner;
+                        Ok(v)
+                    })
+                    .map(|_| ())
             })
-            .map_err(|e| e.into())
+            .map_err(Into::into)
         }
         ExecuteMsg::MarkAsMigrated { pairs } => execute_mark_pairs_as_migrated(deps, info, pairs),
     }
@@ -225,8 +218,6 @@ pub fn execute(
 /// ## Params
 /// * **deps** is an object of type [`DepsMut`].
 ///
-/// * **_env** is an object of type [`Env`].
-///
 /// * **info** is an object of type [`MessageInfo`].
 ///
 /// * **param** is an object of type [`UpdateConfig`] that contains the parameters to update.
@@ -234,12 +225,11 @@ pub fn execute(
 /// ##Executor
 /// Only the owner can execute this.
 pub fn execute_update_config(
-    deps: DepsMut<PalomaQueryWrapper>,
-    _env: Env,
+    deps: DepsMut,
     info: MessageInfo,
     param: UpdateConfig,
 ) -> Result<Response, ContractError> {
-    let mut config: Config = CONFIG.load(deps.storage)?;
+    let mut config = CONFIG.load(deps.storage)?;
 
     // Permission check
     if info.sender != config.owner {
@@ -248,15 +238,12 @@ pub fn execute_update_config(
 
     if let Some(fee_address) = param.fee_address {
         // Validate address format
-        config.fee_address = Some(addr_validate_to_lower(deps.api, fee_address.as_str())?);
+        config.fee_address = Some(addr_validate_to_lower(deps.api, &fee_address)?);
     }
 
     if let Some(generator_address) = param.generator_address {
         // Validate the address format
-        config.generator_address = Some(addr_validate_to_lower(
-            deps.api,
-            generator_address.as_str(),
-        )?);
+        config.generator_address = Some(addr_validate_to_lower(deps.api, &generator_address)?);
     }
 
     if let Some(token_code_id) = param.token_code_id {
@@ -284,7 +271,7 @@ pub fn execute_update_config(
 /// ## Executor
 /// Only the owner can execute this.
 pub fn execute_update_pair_config(
-    deps: DepsMut<PalomaQueryWrapper>,
+    deps: DepsMut,
     info: MessageInfo,
     pair_config: PairConfig,
 ) -> Result<Response, ContractError> {
@@ -323,7 +310,7 @@ pub fn execute_update_pair_config(
 ///
 /// * **init_params** is an [`Option`] type. These are packed params used for custom pair types that need extra data to be instantiated.
 pub fn execute_create_pair(
-    deps: DepsMut<PalomaQueryWrapper>,
+    deps: DepsMut,
     env: Env,
     pair_type: PairType,
     asset_infos: [AssetInfo; 2],
@@ -338,10 +325,7 @@ pub fn execute_create_pair(
 
     let config = CONFIG.load(deps.storage)?;
 
-    if PAIRS
-        .may_load(deps.storage, &pair_key(&asset_infos))?
-        .is_some()
-    {
+    if PAIRS.has(deps.storage, &pair_key(&asset_infos)) {
         return Err(ContractError::PairWasCreated {});
     }
 
@@ -394,7 +378,7 @@ pub fn execute_create_pair(
 ///
 /// * **pairs** is a vector of [`PairType`]. These are pairs that should be marked as transferred.
 fn execute_mark_pairs_as_migrated(
-    deps: DepsMut<PalomaQueryWrapper>,
+    deps: DepsMut,
     info: MessageInfo,
     pairs: Vec<String>,
 ) -> Result<Response, ContractError> {
@@ -404,10 +388,7 @@ fn execute_mark_pairs_as_migrated(
         return Err(ContractError::Unauthorized {});
     }
 
-    let pairs = pairs
-        .iter()
-        .map(|addr| -> StdResult<Addr> { addr_validate_to_lower(deps.api, addr) })
-        .collect::<StdResult<Vec<Addr>>>()?;
+    let pairs = validate_addresses(deps.api, &pairs)?;
 
     let not_migrated: Vec<Addr> = PAIRS_TO_MIGRATE
         .load(deps.storage)?
@@ -429,11 +410,7 @@ fn execute_mark_pairs_as_migrated(
 ///
 /// * **msg** is an object of type [`Reply`].
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(
-    deps: DepsMut<PalomaQueryWrapper>,
-    _env: Env,
-    msg: Reply,
-) -> Result<Response, ContractError> {
+pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let tmp = TMP_PAIR_INFO.load(deps.storage)?;
     if PAIRS.may_load(deps.storage, &tmp.pair_key)?.is_some() {
         return Err(ContractError::PairWasRegistered {});
@@ -468,7 +445,7 @@ pub fn reply(
 /// ## Executor
 /// Only the owner can execute this.
 pub fn deregister(
-    deps: DepsMut<PalomaQueryWrapper>,
+    deps: DepsMut,
     info: MessageInfo,
     asset_infos: [AssetInfo; 2],
 ) -> Result<Response, ContractError> {
@@ -481,15 +458,15 @@ pub fn deregister(
         return Err(ContractError::Unauthorized {});
     }
 
-    let pair_addr: Addr = PAIRS.load(deps.storage, &pair_key(&asset_infos))?;
+    let pair_addr = PAIRS.load(deps.storage, &pair_key(&asset_infos))?;
     PAIRS.remove(deps.storage, &pair_key(&asset_infos));
 
-    let mut messages: Vec<CosmosMsg> = vec![];
+    let mut response = Response::new();
     if let Some(generator) = config.generator_address {
-        let pair_info = query_pair_info(deps.as_ref(), &pair_addr)?;
+        let pair_info = query_pair_info(&deps.querier, &pair_addr)?;
 
         // sets the allocation point to zero for the lp_token
-        messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+        response = response.add_message(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: generator.to_string(),
             msg: to_binary(&DeactivatePool {
                 lp_token: pair_info.liquidity_token.to_string(),
@@ -498,7 +475,7 @@ pub fn deregister(
         }));
     }
 
-    Ok(Response::new().add_messages(messages).add_attributes(vec![
+    Ok(response.add_attributes(vec![
         attr("action", "deregister"),
         attr("pair_contract_addr", pair_addr),
     ]))
@@ -527,7 +504,7 @@ pub fn deregister(
 ///
 /// * **QueryMsg::PairsToMigrate {}** Returns a vector that contains pair addresses that are not migrated.
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps<PalomaQueryWrapper>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
         QueryMsg::Pair { asset_infos } => to_binary(&query_pair(deps, asset_infos)?),
@@ -546,7 +523,7 @@ pub fn query(deps: Deps<PalomaQueryWrapper>, _env: Env, msg: QueryMsg) -> StdRes
 /// Returns a vector that contains blacklisted pair types
 /// ## Params
 /// * **deps** is an object of type [`Deps`].
-pub fn query_blacklisted_pair_types(deps: Deps<PalomaQueryWrapper>) -> StdResult<Vec<PairType>> {
+pub fn query_blacklisted_pair_types(deps: Deps) -> StdResult<Vec<PairType>> {
     PAIR_CONFIGS
         .range(deps.storage, None, None, Order::Ascending)
         .filter_map(|result| match result {
@@ -566,18 +543,15 @@ pub fn query_blacklisted_pair_types(deps: Deps<PalomaQueryWrapper>) -> StdResult
 /// Returns general contract parameters using a custom [`ConfigResponse`] structure.
 /// ## Params
 /// * **deps** is an object of type [`Deps`].
-pub fn query_config(deps: Deps<PalomaQueryWrapper>) -> StdResult<ConfigResponse> {
+pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     let config = CONFIG.load(deps.storage)?;
     let resp = ConfigResponse {
         owner: config.owner,
         token_code_id: config.token_code_id,
         pair_configs: PAIR_CONFIGS
             .range(deps.storage, None, None, Order::Ascending)
-            .map(|item| {
-                let (_, cfg) = item.unwrap();
-                cfg
-            })
-            .collect(),
+            .map(|item| Ok(item?.1))
+            .collect::<StdResult<Vec<_>>>()?,
         fee_address: config.fee_address,
         generator_address: config.generator_address,
         whitelist_code_id: config.whitelist_code_id,
@@ -592,12 +566,9 @@ pub fn query_config(deps: Deps<PalomaQueryWrapper>) -> StdResult<ConfigResponse>
 /// * **deps** is an object of type [`Deps`].
 ///
 /// * **asset_infos** is an array with two items of type [`AssetInfo`]. These are the assets traded in the pair.
-pub fn query_pair(
-    deps: Deps<PalomaQueryWrapper>,
-    asset_infos: [AssetInfo; 2],
-) -> StdResult<PairInfo> {
+pub fn query_pair(deps: Deps, asset_infos: [AssetInfo; 2]) -> StdResult<PairInfo> {
     let pair_addr = PAIRS.load(deps.storage, &pair_key(&asset_infos))?;
-    query_pair_info(deps, &pair_addr)
+    query_pair_info(&deps.querier, &pair_addr)
 }
 
 /// ## Description
@@ -610,14 +581,14 @@ pub fn query_pair(
 ///
 /// * **limit** is a [`Option`] type. Sets the number of pairs to be retrieved.
 pub fn query_pairs(
-    deps: Deps<PalomaQueryWrapper>,
+    deps: Deps,
     start_after: Option<[AssetInfo; 2]>,
     limit: Option<u32>,
 ) -> StdResult<PairsResponse> {
-    let pairs: Vec<PairInfo> = read_pairs(deps, start_after, limit)
+    let pairs = read_pairs(deps, start_after, limit)?
         .iter()
-        .map(|pair_addr| query_pair_info(deps, pair_addr).unwrap())
-        .collect();
+        .map(|pair_addr| query_pair_info(&deps.querier, pair_addr))
+        .collect::<StdResult<Vec<_>>>()?;
 
     Ok(PairsResponse { pairs })
 }
@@ -628,10 +599,7 @@ pub fn query_pairs(
 /// * **deps** is an object of type [`Deps`].
 ///
 /// * **pair_type** is a [`PairType`] struct that returns the fee information (total and maker fees) for a specific pair type.
-pub fn query_fee_info(
-    deps: Deps<PalomaQueryWrapper>,
-    pair_type: PairType,
-) -> StdResult<FeeInfoResponse> {
+pub fn query_fee_info(deps: Deps, pair_type: PairType) -> StdResult<FeeInfoResponse> {
     let config = CONFIG.load(deps.storage)?;
     let pair_config = PAIR_CONFIGS.load(deps.storage, pair_type.to_string())?;
 
@@ -651,11 +619,7 @@ pub fn query_fee_info(
 ///
 /// * **_msg** is an object of type [`MigrateMsg`].
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(
-    deps: DepsMut<PalomaQueryWrapper>,
-    _env: Env,
-    msg: MigrateMsg,
-) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
     let contract_version = get_contract_version(deps.storage)?;
 
     match contract_version.contract.as_ref() {
