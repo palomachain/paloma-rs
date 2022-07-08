@@ -4,6 +4,7 @@ members = [
     "dex-tokenomics/*",
     "dex/*",
     "egg/*",
+    "evm-receiver",
     "packages/*",
     "wormhole/*",
 ]
