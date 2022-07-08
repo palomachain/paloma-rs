@@ -22,12 +22,12 @@ backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
 astroport = { path = "../../packages/astroport", default-features = false }
-cosmwasm-std = { version = "1.0.0" }
+cosmwasm-std = "1.0.0"
 cw-storage-plus = { version = "0.13.4", features = ["iterator"] }
 cw2 = "0.13.4"
 cw20 = "0.13.4"
 schemars = "0.8.10"
-serde = { version = "1.0.137", default-features = false, features = ["derive"] }
+serde = { version = "1.0.138", default-features = false, features = ["derive"] }
 thiserror = "1.0.31"
 
 [dev-dependencies]

@@ -221,7 +221,7 @@ pub fn sequence_set(storage: &mut dyn Storage, emitter: &[u8], sequence: u64) ->
 pub fn sequence_read(storage: &dyn Storage, emitter: &[u8]) -> u64 {
     bucket_read(storage, SEQUENCE_KEY)
         .load(emitter)
-        .unwrap_or_default()
+        .unwrap_or(0)
 }
 
 pub fn vaa_archive_add(storage: &mut dyn Storage, hash: &[u8]) -> StdResult<()> {
@@ -231,7 +231,7 @@ pub fn vaa_archive_add(storage: &mut dyn Storage, hash: &[u8]) -> StdResult<()> 
 pub fn vaa_archive_check(storage: &dyn Storage, hash: &[u8]) -> bool {
     bucket_read(storage, GUARDIAN_SET_KEY)
         .load(hash)
-        .unwrap_or_default()
+        .unwrap_or(false)
 }
 
 pub fn wrapped_asset(storage: &mut dyn Storage) -> Bucket<HumanAddr> {

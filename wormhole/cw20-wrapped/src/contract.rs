@@ -7,13 +7,13 @@ use cosmwasm_std::{
 use cosmwasm_std::entry_point;
 
 use cw2::set_contract_version;
-use cw20_legacy::allowances::{
+use cw20_base::allowances::{
     execute_burn_from, execute_decrease_allowance, execute_increase_allowance, execute_send_from,
     execute_transfer_from, query_allowance,
 };
-use cw20_legacy::contract::{execute_mint, execute_send, execute_transfer, query_balance};
-use cw20_legacy::state::{MinterData, TokenInfo, TOKEN_INFO};
-use cw20_legacy::ContractError;
+use cw20_base::contract::{execute_mint, execute_send, execute_transfer, query_balance};
+use cw20_base::state::{MinterData, TokenInfo, TOKEN_INFO};
+use cw20_base::ContractError;
 
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, WrappedAssetInfoResponse};
 use crate::state::{wrapped_asset_info, wrapped_asset_info_read, WrappedAssetInfo};
@@ -43,7 +43,7 @@ pub fn instantiate(
         total_supply: Uint128::new(0),
         // set creator as minter
         mint: Some(MinterData {
-            minter: deps.api.addr_canonicalize(info.sender.as_str())?,
+            minter: deps.api.addr_validate(info.sender.as_str())?,
             cap: None,
         }),
     };

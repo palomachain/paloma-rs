@@ -4,10 +4,10 @@ use cosmwasm_std::testing::{
 use cosmwasm_std::{from_slice, Addr, Api, OwnedDeps, Response, Storage, Uint128};
 use cosmwasm_storage::to_length_prefixed;
 use cw20::TokenInfoResponse;
-use cw20_wrapped::contract::{execute, instantiate, query};
-use cw20_wrapped::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, WrappedAssetInfoResponse};
-use cw20_wrapped::state::{WrappedAssetInfo, KEY_WRAPPED_ASSET};
-use cw20_wrapped::ContractError;
+use cw20_wrapped_2::contract::{execute, instantiate, query};
+use cw20_wrapped_2::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, WrappedAssetInfoResponse};
+use cw20_wrapped_2::state::{WrappedAssetInfo, KEY_WRAPPED_ASSET};
+use cw20_wrapped_2::ContractError;
 
 static INITIALIZER: &str = "addr0000";
 static RECIPIENT: &str = "addr2222";
@@ -123,7 +123,7 @@ fn query_works() {
 
     let query_response = query(deps.as_ref(), mock_env(), QueryMsg::WrappedAssetInfo {}).unwrap();
     assert_eq!(
-        from_slice::<WrappedAssetInfoResponse>(&query_response).unwrap(),
+        from_slice::<WrappedAssetInfoResponse>(query_response.as_slice()).unwrap(),
         WrappedAssetInfoResponse {
             asset_chain: 1,
             asset_address: vec![1; 32].into(),

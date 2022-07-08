@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{CanonicalAddr, StdError, StdResult, Storage, Uint128};
+use cosmwasm_std::{Addr, StdError, StdResult, Storage, Uint128};
 use cosmwasm_storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,
@@ -9,16 +9,20 @@ use cosmwasm_storage::{
 
 use wormhole::byte_utils::ByteUtils;
 
+use crate::token_address::{ExternalTokenId, WrappedCW20};
+
 type HumanAddr = String;
 
-pub static CONFIG_KEY: &[u8] = b"config";
-pub static TRANSFER_TMP_KEY: &[u8] = b"transfer_tmp";
-pub static WRAPPED_ASSET_KEY: &[u8] = b"wrapped_asset";
-pub static WRAPPED_ASSET_SEQ_KEY: &[u8] = b"wrapped_seq_asset";
-pub static WRAPPED_ASSET_ADDRESS_KEY: &[u8] = b"wrapped_asset_address";
-pub static BRIDGE_CONTRACTS: &[u8] = b"bridge_contracts";
-pub static BRIDGE_DEPOSITS: &[u8] = b"bridge_deposits";
-pub static NATIVE_COUNTER: &[u8] = b"native_counter";
+static CONFIG_KEY: &[u8] = b"config";
+static TRANSFER_TMP_KEY: &[u8] = b"transfer_tmp";
+static WRAPPED_ASSET_KEY: &[u8] = b"wrapped_asset";
+static WRAPPED_ASSET_SEQ_KEY: &[u8] = b"wrapped_seq_asset";
+static WRAPPED_ASSET_ADDRESS_KEY: &[u8] = b"wrapped_asset_address";
+static BRIDGE_CONTRACTS: &[u8] = b"bridge_contracts";
+static BRIDGE_DEPOSITS: &[u8] = b"bridge_deposits";
+static NATIVE_COUNTER: &[u8] = b"native_counter";
+static BANK_TOKEN_HASHES_KEY: &[u8] = b"bank_token_hashes";
+static NATIVE_CW20_HASHES_KEY: &[u8] = b"native_cw20_hashes";
 
 // Guardian set information
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -55,28 +59,44 @@ pub fn bridge_contracts_read(storage: &dyn Storage) -> ReadonlyBucket<Vec<u8>> {
     bucket_read(storage, BRIDGE_CONTRACTS)
 }
 
-pub fn wrapped_asset(storage: &mut dyn Storage) -> Bucket<HumanAddr> {
-    bucket(storage, WRAPPED_ASSET_KEY)
+pub fn wrapped_asset(storage: &mut dyn Storage, chain: u16) -> Bucket<WrappedCW20> {
+    Bucket::multilevel(storage, &[WRAPPED_ASSET_KEY, &chain.to_be_bytes()])
 }
 
-pub fn wrapped_asset_read(storage: &dyn Storage) -> ReadonlyBucket<HumanAddr> {
-    bucket_read(storage, WRAPPED_ASSET_KEY)
+pub fn wrapped_asset_read(storage: &dyn Storage, chain: u16) -> ReadonlyBucket<WrappedCW20> {
+    ReadonlyBucket::multilevel(storage, &[WRAPPED_ASSET_KEY, &chain.to_be_bytes()])
 }
 
-pub fn wrapped_asset_seq(storage: &mut dyn Storage) -> Bucket<u64> {
-    bucket(storage, WRAPPED_ASSET_SEQ_KEY)
+pub fn wrapped_asset_seq(storage: &mut dyn Storage, chain: u16) -> Bucket<u64> {
+    Bucket::multilevel(storage, &[WRAPPED_ASSET_SEQ_KEY, &chain.to_be_bytes()])
 }
 
-pub fn wrapped_asset_seq_read(storage: &mut dyn Storage) -> ReadonlyBucket<u64> {
-    bucket_read(storage, WRAPPED_ASSET_SEQ_KEY)
+pub fn wrapped_asset_seq_read(storage: &mut dyn Storage, chain: u16) -> ReadonlyBucket<u64> {
+    ReadonlyBucket::multilevel(storage, &[WRAPPED_ASSET_SEQ_KEY, &chain.to_be_bytes()])
 }
 
-pub fn wrapped_asset_address(storage: &mut dyn Storage) -> Bucket<Vec<u8>> {
+pub fn is_wrapped_asset(storage: &mut dyn Storage) -> Bucket<()> {
     bucket(storage, WRAPPED_ASSET_ADDRESS_KEY)
 }
 
-pub fn wrapped_asset_address_read(storage: &dyn Storage) -> ReadonlyBucket<Vec<u8>> {
+pub fn is_wrapped_asset_read(storage: &dyn Storage) -> ReadonlyBucket<()> {
     bucket_read(storage, WRAPPED_ASSET_ADDRESS_KEY)
+}
+
+pub fn bank_token_hashes(storage: &mut dyn Storage) -> Bucket<String> {
+    bucket(storage, BANK_TOKEN_HASHES_KEY)
+}
+
+pub fn bank_token_hashes_read(storage: &dyn Storage) -> ReadonlyBucket<String> {
+    bucket_read(storage, BANK_TOKEN_HASHES_KEY)
+}
+
+pub fn native_c20_hashes(storage: &mut dyn Storage) -> Bucket<Addr> {
+    bucket(storage, NATIVE_CW20_HASHES_KEY)
+}
+
+pub fn native_c20_hashes_read(storage: &dyn Storage) -> ReadonlyBucket<Addr> {
+    bucket_read(storage, NATIVE_CW20_HASHES_KEY)
 }
 
 type Serialized128 = String;
@@ -90,8 +110,7 @@ pub struct TransferState {
     pub multiplier: Serialized128,
     pub nonce: u32,
     pub previous_balance: Serialized128,
-    pub token_address: HumanAddr,
-    pub token_canonical: CanonicalAddr,
+    pub token_address: Addr,
 }
 
 pub fn wrapped_transfer_tmp(storage: &mut dyn Storage) -> Singleton<TransferState> {
@@ -100,31 +119,31 @@ pub fn wrapped_transfer_tmp(storage: &mut dyn Storage) -> Singleton<TransferStat
 
 pub fn send_native(
     storage: &mut dyn Storage,
-    asset_address: &CanonicalAddr,
+    asset_address: &ExternalTokenId,
     amount: Uint128,
 ) -> StdResult<()> {
     let mut counter_bucket = bucket(storage, NATIVE_COUNTER);
     let new_total = amount
         + counter_bucket
-            .load(asset_address.as_slice())
+            .load(asset_address.serialize().as_slice())
             .unwrap_or(Uint128::zero());
     if new_total > Uint128::new(u64::MAX as u128) {
         return Err(StdError::generic_err(
             "transfer exceeds max outstanding bridged token amount",
         ));
     }
-    counter_bucket.save(asset_address.as_slice(), &new_total)
+    counter_bucket.save(asset_address.serialize().as_slice(), &new_total)
 }
 
 pub fn receive_native(
     storage: &mut dyn Storage,
-    asset_address: &CanonicalAddr,
+    asset_address: &ExternalTokenId,
     amount: Uint128,
 ) -> StdResult<()> {
     let mut counter_bucket = bucket(storage, NATIVE_COUNTER);
-    let total: Uint128 = counter_bucket.load(asset_address.as_slice())?;
+    let total: Uint128 = counter_bucket.load(asset_address.serialize().as_slice())?;
     let result = total.checked_sub(amount)?;
-    counter_bucket.save(asset_address.as_slice(), &result)
+    counter_bucket.save(asset_address.serialize().as_slice(), &result)
 }
 
 pub struct Action;
@@ -170,19 +189,20 @@ impl TokenBridgeMessage {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct TransferInfo {
     pub amount: (u128, u128),
-    pub token_address: Vec<u8>,
+    pub token_address: ExternalTokenId,
     pub token_chain: u16,
-    pub recipient: Vec<u8>,
+    pub recipient: [u8; 32],
     pub recipient_chain: u16,
     pub fee: (u128, u128),
 }
 
 impl TransferInfo {
-    pub fn deserialize(data: &[u8]) -> StdResult<Self> {
+    pub fn deserialize(data: &Vec<u8>) -> StdResult<Self> {
+        let data = data.as_slice();
         let amount = data.get_u256(0);
-        let token_address = data.get_bytes32(32).to_vec();
+        let token_address = ExternalTokenId::deserialize(data.get_const_bytes::<32>(32));
         let token_chain = data.get_u16(64);
-        let recipient = data.get_bytes32(66).to_vec();
+        let recipient = data.get_const_bytes::<32>(66);
         let recipient_chain = data.get_u16(98);
         let fee = data.get_u256(100);
 
@@ -199,7 +219,7 @@ impl TransferInfo {
         [
             self.amount.0.to_be_bytes().to_vec(),
             self.amount.1.to_be_bytes().to_vec(),
-            self.token_address.clone(),
+            self.token_address.serialize().to_vec(),
             self.token_chain.to_be_bytes().to_vec(),
             self.recipient.to_vec(),
             self.recipient_chain.to_be_bytes().to_vec(),
@@ -215,30 +235,71 @@ impl TransferInfo {
 //     64  u16      token_chain
 //     66  [u8; 32] recipient
 //     98  u16      recipient_chain
-//     100 u256     fee
+//     100 [u8; 32] sender_address
 //     132 [u8]     payload
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct TransferWithPayloadInfo {
-    pub transfer_info: TransferInfo,
+    pub amount: (u128, u128),
+    pub token_address: ExternalTokenId,
+    pub token_chain: u16,
+    pub recipient: [u8; 32],
+    pub recipient_chain: u16,
+    pub sender_address: [u8; 32],
     pub payload: Vec<u8>,
 }
 
 impl TransferWithPayloadInfo {
-    pub fn deserialize(data: &[u8]) -> StdResult<Self> {
-        let transfer_info = TransferInfo::deserialize(data)?;
+    pub fn deserialize(data: &Vec<u8>) -> StdResult<Self> {
+        let data = data.as_slice();
+        let amount = data.get_u256(0);
+        let token_address = ExternalTokenId::deserialize(data.get_const_bytes::<32>(32));
+        let token_chain = data.get_u16(64);
+        let recipient = data.get_const_bytes::<32>(66);
+        let recipient_chain = data.get_u16(98);
+        let sender_address = data.get_const_bytes::<32>(100);
         let payload = TransferWithPayloadInfo::get_payload(data);
 
         Ok(TransferWithPayloadInfo {
-            transfer_info,
+            amount,
+            token_address,
+            token_chain,
+            recipient,
+            recipient_chain,
+            sender_address,
             payload,
         })
     }
+
     pub fn serialize(&self) -> Vec<u8> {
-        [self.transfer_info.serialize(), self.payload.clone()].concat()
+        [
+            self.amount.0.to_be_bytes().to_vec(),
+            self.amount.1.to_be_bytes().to_vec(),
+            self.token_address.serialize().to_vec(),
+            self.token_chain.to_be_bytes().to_vec(),
+            self.recipient.to_vec(),
+            self.recipient_chain.to_be_bytes().to_vec(),
+            self.sender_address.to_vec(),
+            self.payload.clone(),
+        ]
+        .concat()
     }
+
     pub fn get_payload(data: &[u8]) -> Vec<u8> {
         data[132..].to_vec()
+    }
+
+    /// Convert [`TransferWithPayloadInfo`] into [`TransferInfo`] for the
+    /// purpose of handling them uniformly. Transfers with payload have 0 fees.
+    pub fn as_transfer_info(&self) -> TransferInfo {
+        TransferInfo {
+            amount: self.amount,
+            token_address: self.token_address.clone(),
+            token_chain: self.token_chain,
+            recipient: self.recipient,
+            recipient_chain: self.recipient_chain,
+            fee: (0, 0),
+        }
     }
 }
 
@@ -249,7 +310,7 @@ impl TransferWithPayloadInfo {
 // 67 [32]uint8  Name
 
 pub struct AssetMeta {
-    pub token_address: Vec<u8>,
+    pub token_address: ExternalTokenId,
     pub token_chain: u16,
     pub decimals: u8,
     pub symbol: Vec<u8>,
@@ -259,7 +320,7 @@ pub struct AssetMeta {
 impl AssetMeta {
     pub fn deserialize(data: &Vec<u8>) -> StdResult<Self> {
         let data = data.as_slice();
-        let token_address = data.get_bytes32(0).to_vec();
+        let token_address = ExternalTokenId::deserialize(data.get_const_bytes::<32>(0));
         let token_chain = data.get_u16(32);
         let decimals = data.get_u8(34);
         let symbol = data.get_bytes32(35).to_vec();
@@ -276,7 +337,7 @@ impl AssetMeta {
 
     pub fn serialize(&self) -> Vec<u8> {
         [
-            self.token_address.clone(),
+            self.token_address.serialize().to_vec(),
             self.token_chain.to_be_bytes().to_vec(),
             self.decimals.to_be_bytes().to_vec(),
             self.symbol.clone(),

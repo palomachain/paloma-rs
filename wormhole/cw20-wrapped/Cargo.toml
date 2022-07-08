@@ -1,5 +1,5 @@
 [package]
-name = "cw20-wrapped"
+name = "cw20-wrapped-2"
 version = "0.1.0"
 authors = ["Yuriy Savchenko <yuriy.savchenko@gmail.com>"]
 edition = "2018"
@@ -15,11 +15,11 @@ library = []
 
 [dependencies]
 cosmwasm-std = "1.0.0"
-cosmwasm-storage = "1.0.0"
-cw-storage-plus  = "0.13.4"
+cosmwasm-storage = { version = "1.0.0" }
+schemars = "0.8.10"
+serde = { version = "1.0.138", default-features = false, features = ["derive"] }
 cw2 = "0.13.4"
 cw20 = "0.13.4"
-cw20-legacy = { path = "../cw20-legacy", features = ["library"] }
-schemars = "0.8.10"
-serde = { version = "1.0.137", default-features = false, features = ["derive"] }
+cw20-base = { version = "0.13.4", features = ["library"] } 
+cw-storage-plus  = "0.13.4"
 thiserror = "1.0.31"
