@@ -1,0 +1,16 @@
+[package]
+name = "p2w-sdk"
+version = "0.1.1"
+authors = ["Wormhole Contributors <contact@certus.one>"]
+edition = "2021"
+description = "Pyth to Wormhole SDK"
+
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+hex = "0.4.3"
+pyth-sdk-solana = "0.4.2"
+serde = { version = "1.0.139", default-features = false, features = ["derive"] }
+solana-program = "1.11.3"
