@@ -33,6 +33,11 @@ pub enum QueryMsg {
     },
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct PythPriceData {
+    prices: Vec<(String, Uint128)>,
+}
+
 /// This structure describes a migration message.
 /// We currently take no arguments for migrations.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

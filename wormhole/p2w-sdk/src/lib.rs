@@ -14,10 +14,13 @@ use std::io::Read;
 use std::iter::Iterator;
 use std::mem;
 
-use pyth_sdk_solana::state::PriceStatus;
+use pyth_sdk::PriceStatus;
 
-use solana_program::clock::UnixTimestamp;
-use solana_program::pubkey::Pubkey;
+use crate::solana_program::clock::UnixTimestamp;
+use crate::solana_program::pubkey::Pubkey;
+
+//mod pyth_sdk_solana;
+mod solana_program;
 
 pub type ErrBox = Box<dyn std::error::Error>;
 
@@ -455,7 +458,7 @@ impl PriceAttestation {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pyth_sdk_solana::state::PriceStatus;
+    use pyth_sdk::PriceStatus;
 
     fn mock_attestation(prod: Option<[u8; 32]>, price: Option<[u8; 32]>) -> PriceAttestation {
         let product_id_bytes = prod.unwrap_or([21u8; 32]);

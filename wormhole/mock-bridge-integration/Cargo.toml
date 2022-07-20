@@ -15,19 +15,17 @@ library = []
 [dependencies]
 cosmwasm-std = "1.0.0"
 cosmwasm-storage = { version = "1.0.0" }
-schemars = "0.8.10"
-serde = { version = "1.0.138", default-features = false, features = ["derive"] }
 cw20 = "0.13.4"
 cw20-base = { version = "0.13.4", features = ["library"] }
 cw20-wrapped-2 = { path = "../cw20-wrapped", features = ["library"] }
-terraswap = "2.6.1"
-thiserror = "1.0.31"
-k256 = { version = "0.9.4", default-features = false, features = ["ecdsa"] }
-sha3 = { version = "0.9.1", default-features = false }
 generic-array = { version = "0.14.4" }
 hex = "0.4.2"
-lazy_static = "1.4.0"
-bigint = "4"
+k256 = { version = "0.9.4", default-features = false, features = ["ecdsa"] }
+schemars = "0.8.10"
+serde = { version = "1.0.138", default-features = false, features = ["derive"] }
+sha3 = { version = "0.9.1", default-features = false }
+terraswap = "2.6.1"
+thiserror = "1.0.31"
 
 wormhole-bridge-paloma = { path = "../wormhole", features = ["library"] }
 token-bridge-paloma = { path = "../token-bridge", features = ["library"] }

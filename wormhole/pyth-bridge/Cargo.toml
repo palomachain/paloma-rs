@@ -2,7 +2,7 @@
 name = "pyth-bridge"
 version = "0.1.0"
 authors = ["Wormhole Contributors <contact@certus.one>"]
-edition = "2018"
+edition = "2021"
 description = "Pyth price receiver"
 
 [lib]
@@ -14,21 +14,17 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
-bigint = "4"
 cosmwasm-std = "1.0.0"
 cosmwasm-storage = { version = "1.0.0" }
 generic-array = { version = "0.14.5" }
 hex = "0.4.3"
 k256 = { version = "0.9.6", default-features = false, features = ["ecdsa"] }
-lazy_static = "1.4.0"
 p2w-sdk = { path = "../p2w-sdk" }
 pyth-sdk = "0.4.2"
 schemars = "0.8.10"
 serde = { version = "1.0.139", default-features = false, features = ["derive"] }
 serde_derive = { version = "1.0.139"}
 sha3 = { version = "0.9.1", default-features = false }
-solana-program = "1.11.3"
-terraswap = "2.4.0"
 thiserror = "1.0.31"
 wormhole-bridge-paloma = { path = "../wormhole", features = ["library"] }
 

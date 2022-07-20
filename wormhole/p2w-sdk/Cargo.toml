@@ -11,6 +11,6 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 hex = "0.4.3"
-pyth-sdk-solana = "0.4.2"
+pyth-sdk = "0.4.2"
+pyth-sdk-solana = { path = "../pyth-sdk-solana" }
 serde = { version = "1.0.139", default-features = false, features = ["derive"] }
-solana-program = "1.11.3"
