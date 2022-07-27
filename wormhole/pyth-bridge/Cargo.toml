@@ -16,18 +16,18 @@ library = []
 [dependencies]
 cosmwasm-std = "1.0.0"
 cosmwasm-storage = { version = "1.0.0" }
-generic-array = { version = "0.14.5" }
+generic-array = "0.14.5"
 hex = "0.4.3"
 k256 = { version = "0.9.6", default-features = false, features = ["ecdsa"] }
 p2w-sdk = { path = "../p2w-sdk" }
 pyth-sdk = "0.4.2"
 schemars = "0.8.10"
-serde = { version = "1.0.139", default-features = false, features = ["derive"] }
-serde_derive = { version = "1.0.139"}
-sha3 = { version = "0.9.1", default-features = false }
+serde = { version = "1.0.140", default-features = false, features = ["derive"] }
+serde_derive = "1.0.140"
+sha3 = { version = "0.10.1", default-features = false }
 thiserror = "1.0.31"
 wormhole-bridge-paloma = { path = "../wormhole", features = ["library"] }
 
 [dev-dependencies]
-cosmwasm-vm = { version = "0.16.0", default-features = false }
-serde_json = "1.0"
+cosmwasm-vm = { version = "1.0.0", default-features = false }
+serde_json = "1.0.82"
