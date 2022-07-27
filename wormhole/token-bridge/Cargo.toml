@@ -2,7 +2,7 @@
 name = "token-bridge-paloma"
 version = "0.1.0"
 authors = ["Yuriy Savchenko <yuriy.savchenko@gmail.com>"]
-edition = "2018"
+edition = "2021"
 description = "Wormhole token bridge"
 
 [lib]
@@ -17,19 +17,19 @@ library = []
 cosmwasm-std = "1.0.0"
 cosmwasm-storage = { version = "1.0.0" }
 schemars = "0.8.10"
-serde = { version = "1.0.138", default-features = false, features = ["derive"] }
+serde = { version = "1.0.140", default-features = false, features = ["derive"] }
 cw20 = "0.13.4"
 cw20-base = { version = "0.13.4", features = ["library"] }
 cw20-wrapped-2 = { path = "../cw20-wrapped", features = ["library"] }
-terraswap = "2.6.1"
+terraswap = "2.7.0"
 wormhole-bridge-paloma = { path = "../wormhole", features = ["library"] }
 thiserror = "1.0.31"
 k256 = { version = "0.9.4", default-features = false, features = ["ecdsa"] }
-sha3 = { version = "0.9.1", default-features = false }
-generic-array = { version = "0.14.4" }
-hex = "0.4.2"
+sha3 = { version = "0.10.1", default-features = false }
+generic-array = "0.14.5"
+hex = "0.4.3"
 lazy_static = "1.4.0"
-bigint = "4"
+bigint = "4.4.3"
 
 [dev-dependencies]
-serde_json = "1.0"
+serde_json = "1.0.82"
