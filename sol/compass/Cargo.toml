@@ -1,0 +1,19 @@
+[package]
+name = "compass"
+version = "0.1.0"
+edition = "2021"
+description = "Compass EVM"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+arrayvec = "0.7.2"
+borsh = "0.9.3"
+borsh-derive = "0.9.3"
+ethabi = "17.1.0"
+solana-program = "1.11.4"
+solana-sdk = "1.11.4"
+
+[dev-dependencies]
+solana-program-test = "1.11.4"

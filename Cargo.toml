@@ -5,6 +5,7 @@ members = [
     "dex/*",
     "egg/*",
     "packages/*",
+    "sol/*",
     "wormhole/*",
 ]
 
