@@ -13,7 +13,7 @@ documentation = "https://docs.cosmwasm.com"
 cw0 = "0.10.3"
 cosmwasm-std = "1.0.0"
 schemars = "0.8.10"
-serde = { version = "1.0.138", default-features = false, features = ["derive"] }
+serde = { version = "1.0.140", default-features = false, features = ["derive"] }
 
 [dev-dependencies]
 cosmwasm-schema = "1.0.0"
