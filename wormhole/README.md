@@ -4,133 +4,130 @@ This readme describes the steps for building, verifying, and deploying smart con
 
 **WARNING**: *This process is only Linux host compatible at this time.*
 
-## Verify Tilt
+## Build and Deploy Contracts on Testnet
 
-Before building contracts, ensure that the specific commit you will be
-building from passes in tilt. This that ensures basic functionality of the
-Paloma smart contracts that you are about to build and deploy.
-
-## Build Contracts
-
-The following command can be used to build Paloma contracts via Docker.
-
-Build Target Options: [`mainnet`|`testnet`|`devnet`|
-
-These network names correspond to the naming convention used by wormhole
-elsewhere. This means that `mainnet` corresponds to Paloma `mainnet`,
-`testnet` corresponds to Paloma `testnet`, and `devnet` is `localpaloma`.
+Contracts can be built in this repository with just
 
 ```console
-wormhole/paloma $ make artifacts
+cargo wasm
 ```
 
-Upon completion, the compiled bytecode for the contracts will be placed
-into the `artifacts` directory.
+Which is an alias for `cargo build --release --target wasm32-unknown-unknown`.
+It is helpful to optimize the output wasm. 
+Upon completion, the compiled `wormhole.wasm` and `pyth-bridge.wasm` files can
+be found in `target/wasm32-unknown-unknown/release/`. Both of these contracts
+should be uploaded with the command
 
-## Verify Checksums
-
-Now that you have built the contracts, you should ask a peer to build
-using the same process and compare the equivalent checksums.txt files to make
-sure the contract bytecode(s) are deterministic.
-
-```console
-wormhole/paloma $ cat artifacts/checksums.txt
+```bash
+PUBKEY=<your pubkey>
+for contract in wormhole.wasm pyth-bridge.wasm; do
+  palomad tx wasm store \
+    "$contract" \
+    --from $PUBKEY \
+    --output json \
+    --gas auto \
+    --fees 5000ugrain \
+    --chain-id paloma-testnet-6 \
+    -y -b block
+done
 ```
 
-Once you have verified the contracts are deterministic with a peer, you can now move to the deploy step.
+We'll want to keep track of the addresses of these contracts for later.
+Instantiate the wormhole contract:
 
-## Run tests
+```bash
+# These values are obtained from https://github.com/certusone/wormhole-examples/blob/main/receiver/evm/.env.testnet
+# INIT_SIGNERS=["0x13947Bd48b18E53fdAeEe77F3473391aC727C638"] has been translated to base64.
+JSON="$(cat <<EOT
+{
+  "gov_chain": 1,
+  "gov_address": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQ=",
+  "guardian_set_expirity": 86400,
+  "initial_guardian_set": {
+    "addresses": [ { "bytes": "E5R71IsY5T/a7ud/NHM5Gscnxjg=" } ],
+    "expiration_time": 0
+  }
+}
+EOT
+)"
 
-**Disclaimer: Currently the only test that exists is for the token bridge's transfer.**
-
-You can run the integration test suite on the artifacts you built.
-
-```console
-wormhole/paloma $ make test
+exec palomad tx wasm instantiate \
+6 "$JSON" \
+--from "$PUBKEY" \
+--fees 400ugrain \
+--label "wormhole" \
+--chain-id paloma-testnet-6 \
+--gas auto \
+-y --no-admin -b block
 ```
 
-This command deploys your artifacts and performs various interactions with your
-contracts in a LocalPaloma node. Any new functionality (including expected errors)
-to the contracts should be added to this test suite.
+This is instantiated on `paloma-testnet-6` as `WORMHOLE=paloma12fykm2xhg5ces2vmf4q2aem8c958exv3v0wmvrspa8zucrdwjedsqk2609`.
+Now we can instantiate the pyth bridge contract:
 
-## Deploy Contracts
+```bash
+JSON="$(cat <<EOT
+{
+  "pyth_emitter": "80YZWsAvN9YNTbj/pu90yxvjVQBHVDpKnums9NeGl7A=",
+  "pyth_emitter_chain": 1,
+  "wormhole_contract": "$WORMHOLE"
+}
+EOT
+)"
 
-Now that you have built and verified checksums, you can now deploy one or more relevant contracts to Paloma.
-
-Deploy Target Options: [`mainnet`|`testnet`|`devnet`]
-
-You will need to define a `payer-DEPLOY_TARGET.json` for the relevant deploy
-target (eg. `payer-testnet.json`).  This will contain the relevant wallet
-private key that you will be using to deploy the contracts.
-
-```console
-wormhole/paloma $ make deploy/bridge
-wormhole/paloma $ make deploy/token_bridge
-wormhole/paloma $ make deploy/nft_bridge
+exec palomad tx wasm instantiate \
+7 "$JSON" \
+--from "$PUBKEY" \
+--fees 400ugrain \
+--label "wormhole" \
+--chain-id paloma-testnet-6 \
+--gas auto \
+-y --no-admin -b block
 ```
 
-For each deployed contract, you will get a code id for that relevant
-contract for the deployment, make note of these so you can use them in
-the next step for on-chain verification.
+With the bridge contract instantiated we can submit pyth VAA's to the feed and query their value.
+Another contract could base decisions on this feed.
 
-## Verify On-Chain
+```bash
+ALGO_USD="0x08f781a893bc9340140c5f89c8a96f438bcfae4d1474cc0f688e3a52892c7318"
+BTC_USD="0xf9c0172ba10dfa4d19088d94f5bf61d3b54d5bd7483a322a982e1373ee8ea31b"
+ETH_USD="0xca80ba6dc32e08d06f1aa886011eed1d77c77be9eb761cc10d72b7d0a2fd57a6"
+LUNA_USD="0x677dbbf4f68b5cb996a40dfae338b87d5efb2e12a9b2686d1ca16d69b3d7f204"
+USDC_USD="0x41f3625971ca2ed2263e78573fe5ce23e13d2558ed3f2e47ab0f84fb9e7ae722"
 
-Now that you have deployed one or more contracts on-chain, you can verify the
-onchain bytecode and make sure it matches the same checksums you identified
-above.
+VAA="$(curl "https://prices.testnet.pyth.network/api/latest_vaas?ids[]=${ALGO_USD}&ids[]=${BTC_USD}&ids[]=${ETH_USD}&ids[]=${USDC_USD}" | jq .[0])"
 
-For each contract you wish to verify on-chain, you will need the following elements:
+JSON="$(cat <<EOT
+{
+  "submit_vaa": {
+    "data": ${VAA}
+  }
+}
+EOT
+)"
 
-- Path to the contracts bytecode (eg. `artifacts-testnet/token_bridge.wasm`)
-- Paloma code id for the relevant contract (eg. `59614`)
-- A network to verify on (`mainnet`, `testnet`, or `devnet`)
+# Submit the VAA
+palomad tx wasm execute \
+"$WORMHOLE" \
+"$JSON" \
+--chain-id paloma-testnet-6 \
+--from "$PUBKEY" \
+--fees 400ugrain \
+--gas auto \
+-y -b block
 
-Below is how to verify all three contracts:
+JSON="$(cat <<EOT
+{
+  "price_feed": {
+    "id": "${ETH_USD:2}"
+  }
+}
+EOT
+)"
 
-```console
-wormhole/paloma $ ./verify artifacts/wormhole.wasm NEW_BRIDGE_CODE_ID
-wormhole/paloma $ ./verify artifacts/token_bridge.wasm NEW_TOKEN_BRIDGE_CODE_ID
-wormhole/paloma $ ./verify artifacts/nft_bridge.wasm NEW_NFT_BRIDGE_CODE_ID
-```
-Example: `./verify artifacts/token_bridge.wasm 59614`
-
-For each contract, you should expect a `Successfully verified` output message.
-If all contracts can be successfully verified, you can engage in Wormhole
-protocol governance to obtain an authorized VAA for the contract upgrade(s).
-
-A verification failure should never happen, and is a sign of some error in the
-deployment process.  Do not proceed with governance until you can verify the
-on-chain bytecode with the locally compiled bytecode.
-
-
-## Governance
-
-### Mainnet
-
-Upgrades on mainnet have to go through governance. Once the code is deployed in
-the previous step, an unsigned governance VAA can be generated
-
-```sh
-./generate_governance -m token_bridge -c 59614 > token-bridge-upgrade-59614.prototxt
-```
-
-This will write to the `token-bridge-upgrade-59614.prototxt` file, which can
-now be shared with the guardians to vote on.
-
-Once the guardians have reached quorum, the VAA may be submitted from any
-funded wallet: TODO - make this easier and more unified
-
-``` sh
-node main.js paloma execute_governance_vaa <signed VAA (hex)> --rpc "https://lcd.paloma.dev" --chain_id "columbus-5" --mnemonic "..." --token_bridge "paloma10nmmwe8r3g99a9newtqa7a75xfgs2e8z87r2sf"
+palomad q wasm contract-state smart \
+"$WORMHOLE" \
+"$JSON" \
+--chain-id paloma-testnet-6
 ```
 
-### Testnet
 
-For the contracts on testnet, the deployer wallet retains the upgrade
-authority, so these don't have to go through governance.
-
-For example, to migrate the token bridge to 59614, run in `tools/`:
-
-``` sh
-node migrate_testnet.js --code_id 59614 --contract paloma1pseddrv0yfsn76u4zxrjmtf45kdlmalswdv39a --mnemonic "..."
-```
