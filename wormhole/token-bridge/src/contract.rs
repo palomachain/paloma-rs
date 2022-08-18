@@ -1003,7 +1003,7 @@ fn handle_initiate_transfer_token(
     let mut submessages: Vec<SubMsg> = vec![];
 
     // we'll only need this for payload 3 transfers
-    let sender_address = deps.api.addr_canonicalize(&info.sender.to_string())?;
+    let sender_address = deps.api.addr_canonicalize(info.sender.as_ref())?;
     let sender_address = extend_address_to_32_array(&sender_address);
 
     match is_wrapped_asset_read(deps.storage).load(asset_canonical.as_slice()) {
@@ -1273,7 +1273,7 @@ fn handle_initiate_transfer_native_token(
             }
         }
         TransferType::WithPayload { payload } => {
-            let sender_address = deps.api.addr_canonicalize(&info.sender.to_string())?;
+            let sender_address = deps.api.addr_canonicalize(info.sender.as_ref())?;
             let sender_address = extend_address_to_32_array(&sender_address);
             let transfer_info = TransferWithPayloadInfo {
                 amount: (0, amount.u128()),
