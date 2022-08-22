@@ -1,4 +1,5 @@
 use log::*;
+use redis::Commands;
 use serde_derive::Deserialize;
 use solana_geyser_plugin_interface::geyser_plugin_interface::{
     GeyserPlugin, GeyserPluginError, ReplicaAccountInfoVersions, ReplicaBlockInfoVersions,
@@ -22,10 +23,26 @@ impl Config {
     }
 }
 
-#[derive(Default)]
 pub struct GeyserPluginPaloma {
     pub config: Config,
     batch_starting_slot: Option<u64>,
+    redis_client: redis::Client,
+}
+
+impl GeyserPluginPaloma {
+    fn new() -> Self {
+        Self {
+            config: Default::default(),
+            batch_starting_slot: Default::default(),
+            redis_client: redis::Client::open("redis://127.0.0.1/").expect("redis must be running"),
+        }
+    }
+
+    fn redis(&self) -> Result<redis::Connection> {
+        self.redis_client
+            .get_connection()
+            .map_err(|e| GeyserPluginError::Custom(Box::new(e)))
+    }
 }
 
 impl std::fmt::Debug for GeyserPluginPaloma {
@@ -80,49 +97,61 @@ impl GeyserPlugin for GeyserPluginPaloma {
         }
 
         let mut measure_all = Measure::start("geyser-plugin-paloma-update-account-main");
-        match account {
-            ReplicaAccountInfoVersions::V0_0_1(_) => {
-                return Err(GeyserPluginError::AccountsUpdateError {
-                    msg: "replica account v001 not supported".to_string(),
-                });
-            }
-            ReplicaAccountInfoVersions::V0_0_2(account) => {
-                let mut measure_select =
-                    Measure::start("geyser-plugin-paloma-update-account-select");
-                if !self.config.matches_account(account.pubkey) {
-                    return Ok(());
-                }
-                measure_select.stop();
-                inc_new_counter_debug!(
-                    "geyser-plugin-paloma-update-account-select-us",
-                    measure_select.as_us() as usize,
-                    100000,
-                    100000
-                );
+        let account_info = match account {
+            ReplicaAccountInfoVersions::V0_0_1(ai) => message_types::AccountInfo {
+                pubkey: ai.pubkey,
+                lamports: ai.lamports,
+                owner: ai.owner,
+                executable: ai.executable,
+                rent_epoch: ai.rent_epoch,
+                data: ai.data,
+                write_version: ai.write_version,
+            },
+            ReplicaAccountInfoVersions::V0_0_2(ai) => message_types::AccountInfo {
+                pubkey: ai.pubkey,
+                lamports: ai.lamports,
+                owner: ai.owner,
+                executable: ai.executable,
+                rent_epoch: ai.rent_epoch,
+                data: ai.data,
+                write_version: ai.write_version,
+            },
+        };
 
-                debug!(
-                    "Updating account {} with owner {} at slot {:?} using account selector {:?}",
-                    bs58::encode(account.pubkey).into_string(),
-                    bs58::encode(account.owner).into_string(),
-                    slot,
-                    self.config.accounts_filter,
-                );
-
-                let mut measure_update =
-                    Measure::start("geyser-plugin-paloma-update-account-client");
-                info!(
-                    "SEND account {}",
-                    bs58::encode(account.pubkey).into_string()
-                );
-                measure_update.stop();
-                inc_new_counter_debug!(
-                    "geyser-plugin-paloma-update-account-client-us",
-                    measure_update.as_us() as usize,
-                    100000,
-                    100000
-                );
-            }
+        let mut measure_select = Measure::start("geyser-plugin-paloma-update-account-select");
+        if !self.config.matches_account(account_info.pubkey) {
+            return Ok(());
         }
+        measure_select.stop();
+        inc_new_counter_debug!(
+            "geyser-plugin-paloma-update-account-select-us",
+            measure_select.as_us() as usize,
+            100000,
+            100000
+        );
+
+        debug!(
+            "Updating account {} with owner {} at slot {:?} using account selector {:?}",
+            bs58::encode(account_info.pubkey).into_string(),
+            bs58::encode(account_info.owner).into_string(),
+            slot,
+            self.config.accounts_filter,
+        );
+
+        let mut measure_update = Measure::start("geyser-plugin-paloma-update-account-client");
+        let message = serde_json::to_string(&account_info)
+            .map_err(|e| GeyserPluginError::Custom(Box::new(e)))?;
+        let message: &str = &message;
+        self.redis()?
+            .publish("accounts", message)
+            .map_err(|e| GeyserPluginError::Custom(Box::new(e)))?;
+        measure_update.stop();
+        inc_new_counter_debug!(
+            "geyser-plugin-paloma-update-account-client-us",
+            measure_update.as_us() as usize,
+            100000,
+            100000
+        );
 
         measure_all.stop();
 
@@ -145,9 +174,14 @@ impl GeyserPlugin for GeyserPluginPaloma {
         &mut self,
         slot: u64,
         _parent: Option<u64>,
-        status: SlotStatus,
+        _status: SlotStatus,
     ) -> Result<()> {
-        info!("SEND update slot {:?} at with status {:?}", slot, status);
+        // XXX: I feel like I should really use slot status here. It can be one of
+        // Processed/Rooted/Confirmed
+        redis::cmd("SET")
+            .arg("slot")
+            .arg(slot)
+            .execute(&mut self.redis()?);
         Ok(())
     }
 
@@ -156,36 +190,26 @@ impl GeyserPlugin for GeyserPluginPaloma {
         transaction_info: ReplicaTransactionInfoVersions,
         _slot: u64,
     ) -> Result<()> {
-        match transaction_info {
-            ReplicaTransactionInfoVersions::V0_0_1(transaction_info) => {
-                if !(transaction_info.is_vote
-                    && transaction_info
-                        .transaction
-                        .message()
-                        .account_keys()
-                        .iter()
-                        .any(|pk| self.config.matches_account(&pk.to_bytes())))
-                {
-                    return Ok(());
-                }
-
-                info!("SEND {:?}", transaction_info);
-            }
-            ReplicaTransactionInfoVersions::V0_0_2(transaction_info) => {
-                if !(transaction_info.is_vote
-                    && transaction_info
-                        .transaction
-                        .message()
-                        .account_keys()
-                        .iter()
-                        .any(|pk| self.config.matches_account(&pk.to_bytes())))
-                {
-                    return Ok(());
-                }
-
-                info!("SEND {:?}", transaction_info);
-            }
+        let (message, meta) = match transaction_info {
+            ReplicaTransactionInfoVersions::V0_0_1(transaction_info) => (
+                transaction_info.transaction.message(),
+                transaction_info.transaction_status_meta,
+            ),
+            ReplicaTransactionInfoVersions::V0_0_2(transaction_info) => (
+                transaction_info.transaction.message(),
+                transaction_info.transaction_status_meta,
+            ),
+        };
+        if !(message
+            .account_keys()
+            .iter()
+            .any(|pk| self.config.matches_account(&pk.to_bytes())))
+        {
+            return Ok(());
         }
+
+        // XXX: Not actually sure what part of this we want to grab.
+        info!("SEND {:?}", meta);
         Ok(())
     }
 
@@ -205,7 +229,7 @@ impl GeyserPlugin for GeyserPluginPaloma {
 
     /// Check if the plugin is interested in transaction data
     fn transaction_notifications_enabled(&self) -> bool {
-        false
+        !self.config.accounts_filter.is_empty()
     }
 }
 
@@ -215,7 +239,7 @@ impl GeyserPlugin for GeyserPluginPaloma {
 ///
 /// This function returns the GeyserPluginPostgres pointer as trait GeyserPlugin.
 pub unsafe extern "C" fn _create_plugin() -> *mut dyn GeyserPlugin {
-    let plugin = GeyserPluginPaloma::default();
+    let plugin = GeyserPluginPaloma::new();
     let plugin: Box<dyn GeyserPlugin> = Box::new(plugin);
     Box::into_raw(plugin)
 }

@@ -15,8 +15,10 @@ bytemuck = "1.7.2"
 chrono = { version = "0.4.11", features = ["serde"] }
 crossbeam-channel = "0.5"
 log = "0.4.14"
-serde = "1.0.133"
-serde_derive = "1.0.103"
+message-types = { path = "../message_types" }
+redis = "0.21.5"
+serde = "1.0.143"
+serde_derive = "1.0.143"
 serde_json = "1.0.74"
 solana-geyser-plugin-interface = "1.11.5"
 solana-logger = "1.11.5"
