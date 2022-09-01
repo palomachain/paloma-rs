@@ -1,79 +1,183 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{
+    to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult,
+};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, GetCountResponse, InstantiateMsg, QueryMsg};
-use crate::state::{State, STATE};
+use crate::msg::{CustomResponseMsg, ExecuteMsg, InstantiateMsg, MultipleIdMsg, QueryMsg, SingleIdMsg, TargetContractInfo, TokenIdList};
+use crate::state::{Deposit, DEPOSIT, PRICE, TARGET_CONTRACT_INFO};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:{{project-name}}";
+const CONTRACT_NAME: &str = "crates.io:limit-order-bot";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    let state = State {
-        count: msg.count,
-        owner: info.sender.clone(),
-    };
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    STATE.save(deps.storage, &state)?;
+    TARGET_CONTRACT_INFO.save(deps.storage, &msg.target_contract_info)?;
 
-    Ok(Response::new()
-        .add_attribute("method", "instantiate")
-        .add_attribute("owner", info.sender)
-        .add_attribute("count", msg.count.to_string()))
+    Ok(Response::new().add_attribute("method", "instantiate"))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
+    env: Env,
+    _info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Increment {} => try_increment(deps),
-        ExecuteMsg::Reset { count } => try_reset(deps, info, count),
+        ExecuteMsg::GetDeposit {
+            token_id,
+            lower_tick,
+            depositor,
+            deadline,
+        } => get_deposit(deps, token_id, lower_tick, depositor, deadline),
+        ExecuteMsg::PutWithdraw {} => put_withdraw(deps),
+        ExecuteMsg::GetWithdraw { token_ids } => get_withdraw(deps, token_ids),
+        ExecuteMsg::PutCancel {} => put_cancel(deps, env),
+        ExecuteMsg::GetCancel { token_ids } => get_cancel(deps, token_ids),
     }
 }
 
-pub fn try_increment(deps: DepsMut) -> Result<Response, ContractError> {
-    STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
-        state.count += 1;
-        Ok(state)
-    })?;
-
-    Ok(Response::new().add_attribute("method", "try_increment"))
+fn get_deposit(
+    deps: DepsMut,
+    token_id: u128,
+    lower_tick: i32,
+    depositor: String,
+    deadline: u64,
+) -> Result<Response, ContractError> {
+    DEPOSIT.save(
+        deps.storage,
+        token_id,
+        &Deposit {
+            lower_tick,
+            deadline,
+        },
+    )?;
+    Ok(Response::new())
 }
 
-pub fn try_reset(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Response, ContractError> {
-    STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
-        if info.sender != state.owner {
-            return Err(ContractError::Unauthorized {});
+fn put_withdraw(deps: DepsMut) -> Result<Response, ContractError> {
+    let range = DEPOSIT.range(deps.storage, None, None, Order::Ascending);
+    let price = PRICE.load(deps.storage).unwrap_or_default(); // TODO: need to set a price or get a price from the other sc
+    if price == 0 {
+        return Err(ContractError::CustomError {
+            val: "Price is not set.".to_string(),
+        });
+    }
+    let tick = price2tick(price) + 50; // ERR 0.5%
+    let mut token_ids: Vec<u128> = Vec::new();
+    for x in range {
+        let x = x?;
+        if tick < x.1.lower_tick {
+            token_ids.push(x.0);
         }
-        state.count = count;
-        Ok(state)
-    })?;
-    Ok(Response::new().add_attribute("method", "reset"))
+    }
+    let target_contract_info = TARGET_CONTRACT_INFO.load(deps.storage)?;
+    if token_ids.len() > 1 {
+        Ok(Response::new().add_message(CosmosMsg::Custom(MultipleIdMsg {
+            target_contract_info,
+            method: "multiple_withdraw(uint256[])".to_string(),
+            token_ids,
+        })))
+    } else if token_ids.len() == 1 {
+        Ok(Response::new().add_message(CosmosMsg::Custom(SingleIdMsg {
+            target_contract_info,
+            method: "withdraw(uint256)".to_string(),
+            token_id:token_ids[0],
+        })))
+    } else {
+        Err(ContractError::CustomError {
+            val: "Nothing to withdraw".to_string(),
+        })
+    }
+}
+
+fn get_withdraw(deps: DepsMut, token_ids: Vec<u128>) -> Result<Response, ContractError> {
+    for token_id in token_ids {
+        DEPOSIT.remove(deps.storage, token_id);
+    }
+    Ok(Response::new())
+}
+
+fn put_cancel(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
+    let range = DEPOSIT.range(deps.storage, None, None, Order::Ascending);
+    let mut token_ids: Vec<u128> = Vec::new();
+    for x in range {
+        let x = x?;
+        if env.block.time.seconds() < x.1.deadline {
+            token_ids.push(x.0);
+        }
+    }
+    if token_ids.len() > 1 {
+        Ok(Response::new().add_message(CosmosMsg::Custom(MultipleIdMsg {
+            target_contract_info,
+            method: "multiple_cancel(uint256[])".to_string(),
+            token_ids,
+        })))
+    } else if token_ids.len() == 1 {
+        Ok(Response::new().add_message(CosmosMsg::Custom(SingleIdMsg {
+            target_contract_info,
+            method: "cancel(uint256)".to_string(),
+            token_id:token_ids[0],
+        })))
+    } else {
+        Err(ContractError::CustomError {
+            val: "Nothing to withdraw".to_string(),
+        })
+    }
+}
+
+fn get_cancel(deps: DepsMut, token_ids: Vec<u128>) -> Result<Response, ContractError> {
+    for token_id in token_ids {
+        DEPOSIT.remove(deps.storage, token_id);
+    }
+    Ok(Response::new())
+}
+
+fn price2tick(price: f32) -> i32 {
+    let ratio = 1_000_000_000_000.0 / price;
+    ratio.log(1.0001).floor() as i32
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetCount {} => to_binary(&query_count(deps)?),
+        QueryMsg::DepositList {} => to_binary(&deposit_list(deps)?),
+        QueryMsg::WithdrawableList {} => to_binary(&withdrawable_list(deps)?),
     }
 }
 
-fn query_count(deps: Deps) -> StdResult<GetCountResponse> {
-    let state = STATE.load(deps.storage)?;
-    Ok(GetCountResponse { count: state.count })
+fn deposit_list(deps: Deps) -> StdResult<TokenIdList> {
+    let keys = DEPOSIT.keys(deps.storage, None, None, Order::Ascending);
+    let mut token_ids: Vec<u128> = Vec::new();
+    for key in keys {
+        token_ids.push(key?);
+    }
+    Ok(TokenIdList { list: token_ids })
+}
+
+fn withdrawable_list(deps: Deps) -> StdResult<TokenIdList> {
+    let range = DEPOSIT.range(deps.storage, None, None, Order::Ascending);
+    let price = PRICE.load(deps.storage).unwrap_or_default(); // or get price
+    assert_eq!(price, 0);
+    let tick = price2tick(price) + 50; // ERR 0.5%
+    let mut token_ids: Vec<u128> = Vec::new();
+    for x in range {
+        let x = x?;
+        if tick < x.1.lower_tick {
+            token_ids.push(x.0);
+        }
+    }
+    Ok(TokenIdList { list: token_ids })
 }
 
 #[cfg(test)]
