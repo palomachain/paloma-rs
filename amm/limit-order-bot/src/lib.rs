@@ -1,5 +1,5 @@
 #![allow(clippy::derive_partial_eq_without_eq)]
-#![allow(clippy::deprecated)]
+#![allow(deprecated)]
 
 pub mod contract;
 mod error;
