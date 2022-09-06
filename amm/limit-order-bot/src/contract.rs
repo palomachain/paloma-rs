@@ -252,26 +252,22 @@ fn put_cancel(deps: DepsMut, env: Env) -> Result<Response<CustomResponseMsg>, Co
                     ),
                 })),
             )
-        },
-        Ordering::Equal => {
-            Ok(
-                Response::new().add_message(CosmosMsg::Custom(CustomResponseMsg {
-                    target_contract_info,
-                    payload: encode(
-                        contract
-                            .function("withdraw")
-                            .unwrap()
-                            .encode_input(&[Token::Uint(Uint::from(token_ids[0]))])
-                            .unwrap(),
-                    ),
-                })),
-            )
-        },
-        Ordering::Less => {
-            Err(ContractError::CustomError {
-                val: "Nothing to withdraw".to_string(),
-            })
         }
+        Ordering::Equal => Ok(
+            Response::new().add_message(CosmosMsg::Custom(CustomResponseMsg {
+                target_contract_info,
+                payload: encode(
+                    contract
+                        .function("withdraw")
+                        .unwrap()
+                        .encode_input(&[Token::Uint(Uint::from(token_ids[0]))])
+                        .unwrap(),
+                ),
+            })),
+        ),
+        Ordering::Less => Err(ContractError::CustomError {
+            val: "Nothing to withdraw".to_string(),
+        }),
     }
 }
 

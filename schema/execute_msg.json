@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExecuteMsg",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "get_deposit"
+      ],
+      "properties": {
+        "get_deposit": {
+          "type": "object",
+          "required": [
+            "deadline",
+            "lower_tick",
+            "token_id"
+          ],
+          "properties": {
+            "deadline": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "lower_tick": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "token_id": {
+              "type": "integer",
+              "format": "uint128",
+              "minimum": 0.0
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "put_withdraw"
+      ],
+      "properties": {
+        "put_withdraw": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_withdraw"
+      ],
+      "properties": {
+        "get_withdraw": {
+          "type": "object",
+          "required": [
+            "token_ids"
+          ],
+          "properties": {
+            "token_ids": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint128",
+                "minimum": 0.0
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "put_cancel"
+      ],
+      "properties": {
+        "put_cancel": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_cancel"
+      ],
+      "properties": {
+        "get_cancel": {
+          "type": "object",
+          "required": [
+            "token_ids"
+          ],
+          "properties": {
+            "token_ids": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint128",
+                "minimum": 0.0
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  ]
+}

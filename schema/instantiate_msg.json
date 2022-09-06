@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InstantiateMsg",
+  "type": "object",
+  "required": [
+    "price_contract",
+    "target_contract_info"
+  ],
+  "properties": {
+    "price_contract": {
+      "type": "string"
+    },
+    "target_contract_info": {
+      "$ref": "#/definitions/TargetContractInfo"
+    }
+  },
+  "definitions": {
+    "TargetContractInfo": {
+      "type": "object",
+      "required": [
+        "chain_id",
+        "compass_id",
+        "contract_address",
+        "method",
+        "smart_contract_abi"
+      ],
+      "properties": {
+        "chain_id": {
+          "type": "string"
+        },
+        "compass_id": {
+          "type": "string"
+        },
+        "contract_address": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "smart_contract_abi": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
