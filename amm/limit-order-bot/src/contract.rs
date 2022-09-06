@@ -1,13 +1,21 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult,
+    to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order, QueryRequest, Response,
+    StdResult, WasmQuery,
 };
 use cw2::set_contract_version;
+use ethabi::{Contract, Function, Param, ParamType, StateMutability, Token, Uint};
+use hex::encode;
+use pyth_bridge::msg::PriceFeedResponse;
+use pyth_bridge::msg::QueryMsg::PriceFeed;
+use pyth_sdk::PriceIdentifier;
+use std::cmp::Ordering;
+use std::collections::BTreeMap;
 
 use crate::error::ContractError;
-use crate::msg::{CustomResponseMsg, ExecuteMsg, InstantiateMsg, MultipleIdMsg, QueryMsg, SingleIdMsg, TargetContractInfo, TokenIdList};
-use crate::state::{Deposit, DEPOSIT, PRICE, TARGET_CONTRACT_INFO};
+use crate::msg::{CustomResponseMsg, ExecuteMsg, InstantiateMsg, QueryMsg, TokenIdList};
+use crate::state::{Deposit, DEPOSIT, PRICE_CONTRACT, TARGET_CONTRACT_INFO};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:limit-order-bot";
@@ -19,10 +27,10 @@ pub fn instantiate(
     _env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
-) -> Result<Response, ContractError> {
+) -> Result<Response<CustomResponseMsg>, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     TARGET_CONTRACT_INFO.save(deps.storage, &msg.target_contract_info)?;
-
+    PRICE_CONTRACT.save(deps.storage, &msg.price_contract)?; // paloma1xr3rq8yvd7qplsw5yx90ftsr2zdhg4e9z60h5duusgxpv72hud3sac3fdu
     Ok(Response::new().add_attribute("method", "instantiate"))
 }
 
@@ -32,14 +40,13 @@ pub fn execute(
     env: Env,
     _info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response, ContractError> {
+) -> Result<Response<CustomResponseMsg>, ContractError> {
     match msg {
         ExecuteMsg::GetDeposit {
             token_id,
             lower_tick,
-            depositor,
             deadline,
-        } => get_deposit(deps, token_id, lower_tick, depositor, deadline),
+        } => get_deposit(deps, token_id, lower_tick, deadline),
         ExecuteMsg::PutWithdraw {} => put_withdraw(deps),
         ExecuteMsg::GetWithdraw { token_ids } => get_withdraw(deps, token_ids),
         ExecuteMsg::PutCancel {} => put_cancel(deps, env),
@@ -51,9 +58,8 @@ fn get_deposit(
     deps: DepsMut,
     token_id: u128,
     lower_tick: i32,
-    depositor: String,
     deadline: u64,
-) -> Result<Response, ContractError> {
+) -> Result<Response<CustomResponseMsg>, ContractError> {
     DEPOSIT.save(
         deps.storage,
         token_id,
@@ -65,50 +71,122 @@ fn get_deposit(
     Ok(Response::new())
 }
 
-fn put_withdraw(deps: DepsMut) -> Result<Response, ContractError> {
-    let range = DEPOSIT.range(deps.storage, None, None, Order::Ascending);
-    let price = PRICE.load(deps.storage).unwrap_or_default(); // TODO: need to set a price or get a price from the other sc
-    if price == 0 {
+fn put_withdraw(deps: DepsMut) -> Result<Response<CustomResponseMsg>, ContractError> {
+    let pyth_bridge_contract = PRICE_CONTRACT.load(deps.storage)?;
+    let vaa: PriceFeedResponse = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: pyth_bridge_contract,
+        msg: to_binary(&PriceFeed {
+            id: PriceIdentifier::from_hex("JBu1AL4obBcCMqKBBxhpWCNUt136ijcuMZLFvTP7iWdB").unwrap(),
+        })?,
+    }))?;
+    let price = vaa.price_feed.get_current_price().unwrap_or_default();
+    let exp = price.expo;
+    let mut price = price.price as f32;
+    price = match exp.cmp(&0) {
+        Ordering::Greater => price * 10_i32.pow(exp.unsigned_abs()) as f32,
+        Ordering::Less => price / 10_i32.pow(exp.unsigned_abs()) as f32,
+        _ => price,
+    };
+    if price == 0.0 {
         return Err(ContractError::CustomError {
             val: "Price is not set.".to_string(),
         });
     }
     let tick = price2tick(price) + 50; // ERR 0.5%
+    let range = DEPOSIT.range(deps.storage, None, None, Order::Ascending);
     let mut token_ids: Vec<u128> = Vec::new();
-    for x in range {
-        let x = x?;
-        if tick < x.1.lower_tick {
-            token_ids.push(x.0);
+    for item in range {
+        let (token_id, deposit) = item.unwrap();
+        if tick < deposit.lower_tick {
+            token_ids.push(token_id);
         }
     }
     let target_contract_info = TARGET_CONTRACT_INFO.load(deps.storage)?;
-    if token_ids.len() > 1 {
-        Ok(Response::new().add_message(CosmosMsg::Custom(MultipleIdMsg {
-            target_contract_info,
-            method: "multiple_withdraw(uint256[])".to_string(),
-            token_ids,
-        })))
-    } else if token_ids.len() == 1 {
-        Ok(Response::new().add_message(CosmosMsg::Custom(SingleIdMsg {
-            target_contract_info,
-            method: "withdraw(uint256)".to_string(),
-            token_id:token_ids[0],
-        })))
-    } else {
-        Err(ContractError::CustomError {
+    let contract: Contract = Contract {
+        constructor: None,
+        functions: BTreeMap::from_iter(vec![
+            (
+                "withdraw".to_string(),
+                vec![Function {
+                    name: "withdraw".to_string(),
+                    inputs: vec![Param {
+                        name: "tokenId".to_string(),
+                        kind: ParamType::Uint(256),
+                        internal_type: None,
+                    }],
+                    outputs: Vec::new(),
+                    constant: None,
+                    state_mutability: StateMutability::NonPayable,
+                }],
+            ),
+            (
+                "multiple_withdraw".to_string(),
+                vec![Function {
+                    name: "multiple_withdraw".to_string(),
+                    inputs: vec![Param {
+                        name: "tokenIds".to_string(),
+                        kind: ParamType::Array(Box::new(ParamType::Uint(256))),
+                        internal_type: None,
+                    }],
+                    outputs: Vec::new(),
+                    constant: None,
+                    state_mutability: StateMutability::NonPayable,
+                }],
+            ),
+        ]),
+        events: BTreeMap::new(),
+        errors: BTreeMap::new(),
+        receive: false,
+        fallback: false,
+    };
+    match token_ids.len().cmp(&1) {
+        Ordering::Greater => {
+            let mut tokens = Vec::new();
+            for token_id in token_ids {
+                tokens.push(Token::Uint(Uint::from(token_id)));
+            }
+            Ok(
+                Response::new().add_message(CosmosMsg::Custom(CustomResponseMsg {
+                    target_contract_info,
+                    payload: encode(
+                        contract
+                            .function("multiple_withdraw")
+                            .unwrap()
+                            .encode_input(tokens.as_slice())
+                            .unwrap(),
+                    ),
+                })),
+            )
+        }
+        Ordering::Equal => Ok(
+            Response::new().add_message(CosmosMsg::Custom(CustomResponseMsg {
+                target_contract_info,
+                payload: encode(
+                    contract
+                        .function("withdraw")
+                        .unwrap()
+                        .encode_input(&[Token::Uint(Uint::from(token_ids[0]))])
+                        .unwrap(),
+                ),
+            })),
+        ),
+        Ordering::Less => Err(ContractError::CustomError {
             val: "Nothing to withdraw".to_string(),
-        })
+        }),
     }
 }
 
-fn get_withdraw(deps: DepsMut, token_ids: Vec<u128>) -> Result<Response, ContractError> {
+fn get_withdraw(
+    deps: DepsMut,
+    token_ids: Vec<u128>,
+) -> Result<Response<CustomResponseMsg>, ContractError> {
     for token_id in token_ids {
         DEPOSIT.remove(deps.storage, token_id);
     }
     Ok(Response::new())
 }
 
-fn put_cancel(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
+fn put_cancel(deps: DepsMut, env: Env) -> Result<Response<CustomResponseMsg>, ContractError> {
     let range = DEPOSIT.range(deps.storage, None, None, Order::Ascending);
     let mut token_ids: Vec<u128> = Vec::new();
     for x in range {
@@ -117,26 +195,90 @@ fn put_cancel(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
             token_ids.push(x.0);
         }
     }
-    if token_ids.len() > 1 {
-        Ok(Response::new().add_message(CosmosMsg::Custom(MultipleIdMsg {
-            target_contract_info,
-            method: "multiple_cancel(uint256[])".to_string(),
-            token_ids,
-        })))
-    } else if token_ids.len() == 1 {
-        Ok(Response::new().add_message(CosmosMsg::Custom(SingleIdMsg {
-            target_contract_info,
-            method: "cancel(uint256)".to_string(),
-            token_id:token_ids[0],
-        })))
-    } else {
-        Err(ContractError::CustomError {
-            val: "Nothing to withdraw".to_string(),
-        })
+    let target_contract_info = TARGET_CONTRACT_INFO.load(deps.storage)?;
+    let contract: Contract = Contract {
+        constructor: None,
+        functions: BTreeMap::from_iter(vec![
+            (
+                "cancel".to_string(),
+                vec![Function {
+                    name: "cancel".to_string(),
+                    inputs: vec![Param {
+                        name: "tokenId".to_string(),
+                        kind: ParamType::Uint(256),
+                        internal_type: None,
+                    }],
+                    outputs: Vec::new(),
+                    constant: None,
+                    state_mutability: StateMutability::NonPayable,
+                }],
+            ),
+            (
+                "multiple_cancel".to_string(),
+                vec![Function {
+                    name: "multiple_cancel".to_string(),
+                    inputs: vec![Param {
+                        name: "tokenIds".to_string(),
+                        kind: ParamType::Array(Box::new(ParamType::Uint(256))),
+                        internal_type: None,
+                    }],
+                    outputs: Vec::new(),
+                    constant: None,
+                    state_mutability: StateMutability::NonPayable,
+                }],
+            ),
+        ]),
+        events: BTreeMap::new(),
+        errors: BTreeMap::new(),
+        receive: false,
+        fallback: false,
+    };
+
+    match token_ids.len().cmp(&1) {
+        Ordering::Greater => {
+            let mut tokens = Vec::new();
+            for token_id in token_ids {
+                tokens.push(Token::Uint(Uint::from(token_id)));
+            }
+            Ok(
+                Response::new().add_message(CosmosMsg::Custom(CustomResponseMsg {
+                    target_contract_info,
+                    payload: encode(
+                        contract
+                            .function("multiple_cancel")
+                            .unwrap()
+                            .encode_input(tokens.as_slice())
+                            .unwrap(),
+                    ),
+                })),
+            )
+        },
+        Ordering::Equal => {
+            Ok(
+                Response::new().add_message(CosmosMsg::Custom(CustomResponseMsg {
+                    target_contract_info,
+                    payload: encode(
+                        contract
+                            .function("withdraw")
+                            .unwrap()
+                            .encode_input(&[Token::Uint(Uint::from(token_ids[0]))])
+                            .unwrap(),
+                    ),
+                })),
+            )
+        },
+        Ordering::Less => {
+            Err(ContractError::CustomError {
+                val: "Nothing to withdraw".to_string(),
+            })
+        }
     }
 }
 
-fn get_cancel(deps: DepsMut, token_ids: Vec<u128>) -> Result<Response, ContractError> {
+fn get_cancel(
+    deps: DepsMut,
+    token_ids: Vec<u128>,
+) -> Result<Response<CustomResponseMsg>, ContractError> {
     for token_id in token_ids {
         DEPOSIT.remove(deps.storage, token_id);
     }
@@ -166,11 +308,25 @@ fn deposit_list(deps: Deps) -> StdResult<TokenIdList> {
 }
 
 fn withdrawable_list(deps: Deps) -> StdResult<TokenIdList> {
-    let range = DEPOSIT.range(deps.storage, None, None, Order::Ascending);
-    let price = PRICE.load(deps.storage).unwrap_or_default(); // or get price
-    assert_eq!(price, 0);
+    let pyth_bridge_contract = PRICE_CONTRACT.load(deps.storage)?;
+    let vaa: PriceFeedResponse = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: pyth_bridge_contract,
+        msg: to_binary(&PriceFeed {
+            id: PriceIdentifier::from_hex("JBu1AL4obBcCMqKBBxhpWCNUt136ijcuMZLFvTP7iWdB").unwrap(),
+        })?,
+    }))?;
+    let price = vaa.price_feed.get_current_price().unwrap_or_default();
+    let exp = price.expo;
+    let mut price = price.price as f32;
+    price = match exp.cmp(&0) {
+        Ordering::Greater => price * 10_i32.pow(exp.unsigned_abs()) as f32,
+        Ordering::Less => price / 10_i32.pow(exp.unsigned_abs()) as f32,
+        _ => price,
+    };
+    assert_eq!(price, 0.0);
     let tick = price2tick(price) + 50; // ERR 0.5%
     let mut token_ids: Vec<u128> = Vec::new();
+    let range = DEPOSIT.range(deps.storage, None, None, Order::Ascending);
     for x in range {
         let x = x?;
         if tick < x.1.lower_tick {
@@ -178,75 +334,4 @@ fn withdrawable_list(deps: Deps) -> StdResult<TokenIdList> {
         }
     }
     Ok(TokenIdList { list: token_ids })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary};
-
-    #[test]
-    fn proper_initialization() {
-        let mut deps = mock_dependencies();
-
-        let msg = InstantiateMsg { count: 17 };
-        let info = mock_info("creator", &coins(1000, "earth"));
-
-        // we can just call .unwrap() to assert this was a success
-        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-        assert_eq!(0, res.messages.len());
-
-        // it worked, let's query the state
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
-        let value: GetCountResponse = from_binary(&res).unwrap();
-        assert_eq!(17, value.count);
-    }
-
-    #[test]
-    fn increment() {
-        let mut deps = mock_dependencies();
-
-        let msg = InstantiateMsg { count: 17 };
-        let info = mock_info("creator", &coins(2, "token"));
-        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // beneficiary can release it
-        let info = mock_info("anyone", &coins(2, "token"));
-        let msg = ExecuteMsg::Increment {};
-        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // should increase counter by 1
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
-        let value: GetCountResponse = from_binary(&res).unwrap();
-        assert_eq!(18, value.count);
-    }
-
-    #[test]
-    fn reset() {
-        let mut deps = mock_dependencies();
-
-        let msg = InstantiateMsg { count: 17 };
-        let info = mock_info("creator", &coins(2, "token"));
-        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // beneficiary can release it
-        let unauth_info = mock_info("anyone", &coins(2, "token"));
-        let msg = ExecuteMsg::Reset { count: 5 };
-        let res = execute(deps.as_mut(), mock_env(), unauth_info, msg);
-        match res {
-            Err(ContractError::Unauthorized {}) => {}
-            _ => panic!("Must return unauthorized error"),
-        }
-
-        // only the original creator can reset the counter
-        let auth_info = mock_info("creator", &coins(2, "token"));
-        let msg = ExecuteMsg::Reset { count: 5 };
-        let _res = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
-
-        // should now be 5
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
-        let value: GetCountResponse = from_binary(&res).unwrap();
-        assert_eq!(5, value.count);
-    }
 }
