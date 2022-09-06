@@ -10,12 +10,11 @@ use hex::encode;
 use pyth_bridge::msg::PriceFeedResponse;
 use pyth_bridge::msg::QueryMsg::PriceFeed;
 use pyth_sdk::PriceIdentifier;
-use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
 use crate::error::ContractError;
 use crate::msg::{CustomResponseMsg, ExecuteMsg, InstantiateMsg, QueryMsg, TokenIdList};
-use crate::state::{Deposit, DEPOSIT, PRICE_CONTRACT, TARGET_CONTRACT_INFO};
+use crate::state::{Deposit, DEPOSIT, ETH_USD, PRICE_CONTRACT, TARGET_CONTRACT_INFO};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:limit-order-bot";
@@ -72,27 +71,7 @@ fn get_deposit(
 }
 
 fn put_withdraw(deps: DepsMut) -> Result<Response<CustomResponseMsg>, ContractError> {
-    let pyth_bridge_contract = PRICE_CONTRACT.load(deps.storage)?;
-    let vaa: PriceFeedResponse = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-        contract_addr: pyth_bridge_contract,
-        msg: to_binary(&PriceFeed {
-            id: PriceIdentifier::from_hex("JBu1AL4obBcCMqKBBxhpWCNUt136ijcuMZLFvTP7iWdB").unwrap(),
-        })?,
-    }))?;
-    let price = vaa.price_feed.get_current_price().unwrap_or_default();
-    let exp = price.expo;
-    let mut price = price.price as f32;
-    price = match exp.cmp(&0) {
-        Ordering::Greater => price * 10_i32.pow(exp.unsigned_abs()) as f32,
-        Ordering::Less => price / 10_i32.pow(exp.unsigned_abs()) as f32,
-        _ => price,
-    };
-    if price == 0.0 {
-        return Err(ContractError::CustomError {
-            val: "Price is not set.".to_string(),
-        });
-    }
-    let tick = price2tick(price) + 50; // ERR 0.5%
+    let tick = get_tick(deps.as_ref());
     let range = DEPOSIT.range(deps.storage, None, None, Order::Ascending);
     let mut token_ids: Vec<u128> = Vec::new();
     for item in range {
@@ -139,8 +118,23 @@ fn put_withdraw(deps: DepsMut) -> Result<Response<CustomResponseMsg>, ContractEr
         receive: false,
         fallback: false,
     };
-    match token_ids.len().cmp(&1) {
-        Ordering::Greater => {
+    match token_ids.len() {
+        0 => Err(ContractError::CustomError {
+            val: "Nothing to withdraw".to_string(),
+        }),
+        1 => Ok(
+            Response::new().add_message(CosmosMsg::Custom(CustomResponseMsg {
+                target_contract_info,
+                payload: encode(
+                    contract
+                        .function("withdraw")
+                        .unwrap()
+                        .encode_input(&[Token::Uint(Uint::from(token_ids[0]))])
+                        .unwrap(),
+                ),
+            })),
+        ),
+        _ => {
             let mut tokens = Vec::new();
             for token_id in token_ids {
                 tokens.push(Token::Uint(Uint::from(token_id)));
@@ -158,21 +152,6 @@ fn put_withdraw(deps: DepsMut) -> Result<Response<CustomResponseMsg>, ContractEr
                 })),
             )
         }
-        Ordering::Equal => Ok(
-            Response::new().add_message(CosmosMsg::Custom(CustomResponseMsg {
-                target_contract_info,
-                payload: encode(
-                    contract
-                        .function("withdraw")
-                        .unwrap()
-                        .encode_input(&[Token::Uint(Uint::from(token_ids[0]))])
-                        .unwrap(),
-                ),
-            })),
-        ),
-        Ordering::Less => Err(ContractError::CustomError {
-            val: "Nothing to withdraw".to_string(),
-        }),
     }
 }
 
@@ -234,8 +213,23 @@ fn put_cancel(deps: DepsMut, env: Env) -> Result<Response<CustomResponseMsg>, Co
         fallback: false,
     };
 
-    match token_ids.len().cmp(&1) {
-        Ordering::Greater => {
+    match token_ids.len() {
+        0 => Err(ContractError::CustomError {
+            val: "Nothing to withdraw".to_string(),
+        }),
+        1 => Ok(
+            Response::new().add_message(CosmosMsg::Custom(CustomResponseMsg {
+                target_contract_info,
+                payload: encode(
+                    contract
+                        .function("withdraw")
+                        .unwrap()
+                        .encode_input(&[Token::Uint(Uint::from(token_ids[0]))])
+                        .unwrap(),
+                ),
+            })),
+        ),
+        _ => {
             let mut tokens = Vec::new();
             for token_id in token_ids {
                 tokens.push(Token::Uint(Uint::from(token_id)));
@@ -253,21 +247,6 @@ fn put_cancel(deps: DepsMut, env: Env) -> Result<Response<CustomResponseMsg>, Co
                 })),
             )
         }
-        Ordering::Equal => Ok(
-            Response::new().add_message(CosmosMsg::Custom(CustomResponseMsg {
-                target_contract_info,
-                payload: encode(
-                    contract
-                        .function("withdraw")
-                        .unwrap()
-                        .encode_input(&[Token::Uint(Uint::from(token_ids[0]))])
-                        .unwrap(),
-                ),
-            })),
-        ),
-        Ordering::Less => Err(ContractError::CustomError {
-            val: "Nothing to withdraw".to_string(),
-        }),
     }
 }
 
@@ -281,7 +260,20 @@ fn get_cancel(
     Ok(Response::new())
 }
 
-fn price2tick(price: f32) -> i32 {
+fn get_tick(deps: Deps) -> i32 {
+    let pyth_bridge_contract = PRICE_CONTRACT.load(deps.storage).unwrap();
+    let vaa: PriceFeedResponse = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: pyth_bridge_contract,
+        msg: to_binary(&PriceFeed {
+            id: PriceIdentifier::from_hex(ETH_USD).unwrap(),
+        }).unwrap(),
+    })).unwrap();
+    let price = vaa.price_feed.get_current_price().unwrap_or_default();
+    let price = (price.price as f64) * 10_f64.powi(price.expo);
+    price2tick(price) + 50 // ERR 0.5%
+}
+
+fn price2tick(price: f64) -> i32 {
     let ratio = 1_000_000_000_000.0 / price;
     ratio.log(1.0001).floor() as i32
 }
@@ -296,31 +288,13 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 fn deposit_list(deps: Deps) -> StdResult<TokenIdList> {
     let keys = DEPOSIT.keys(deps.storage, None, None, Order::Ascending);
-    let mut token_ids: Vec<u128> = Vec::new();
-    for key in keys {
-        token_ids.push(key?);
-    }
-    Ok(TokenIdList { list: token_ids })
+    Ok(TokenIdList {
+        list: keys.into_iter().collect::<StdResult<_>>()?,
+    })
 }
 
 fn withdrawable_list(deps: Deps) -> StdResult<TokenIdList> {
-    let pyth_bridge_contract = PRICE_CONTRACT.load(deps.storage)?;
-    let vaa: PriceFeedResponse = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-        contract_addr: pyth_bridge_contract,
-        msg: to_binary(&PriceFeed {
-            id: PriceIdentifier::from_hex("JBu1AL4obBcCMqKBBxhpWCNUt136ijcuMZLFvTP7iWdB").unwrap(),
-        })?,
-    }))?;
-    let price = vaa.price_feed.get_current_price().unwrap_or_default();
-    let exp = price.expo;
-    let mut price = price.price as f32;
-    price = match exp.cmp(&0) {
-        Ordering::Greater => price * 10_i32.pow(exp.unsigned_abs()) as f32,
-        Ordering::Less => price / 10_i32.pow(exp.unsigned_abs()) as f32,
-        _ => price,
-    };
-    assert_eq!(price, 0.0);
-    let tick = price2tick(price) + 50; // ERR 0.5%
+    let tick = get_tick(deps);
     let mut token_ids: Vec<u128> = Vec::new();
     let range = DEPOSIT.range(deps.storage, None, None, Order::Ascending);
     for x in range {
