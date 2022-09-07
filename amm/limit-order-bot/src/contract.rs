@@ -264,12 +264,16 @@ fn get_cancel(
 
 fn get_tick(deps: Deps) -> i32 {
     let pyth_bridge_contract = PRICE_CONTRACT.load(deps.storage).unwrap();
-    let vaa: PriceFeedResponse = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-        contract_addr: pyth_bridge_contract,
-        msg: to_binary(&PriceFeed {
-            id: PriceIdentifier::from_hex(ETH_USD).unwrap(),
-        }).unwrap(),
-    })).unwrap();
+    let vaa: PriceFeedResponse = deps
+        .querier
+        .query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: pyth_bridge_contract,
+            msg: to_binary(&PriceFeed {
+                id: PriceIdentifier::from_hex(ETH_USD).unwrap(),
+            })
+            .unwrap(),
+        }))
+        .unwrap();
     let price = vaa.price_feed.get_current_price().unwrap_or_default();
     assert_ne!(price.price, 0);
     let price = (price.price as f64) * 10_f64.powi(price.expo);
