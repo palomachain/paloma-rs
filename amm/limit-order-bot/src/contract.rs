@@ -81,6 +81,7 @@ fn put_withdraw(deps: DepsMut) -> Result<Response<CustomResponseMsg>, ContractEr
         }
     }
     let target_contract_info = TARGET_CONTRACT_INFO.load(deps.storage)?;
+    #[allow(deprecated)]
     let contract: Contract = Contract {
         constructor: None,
         functions: BTreeMap::from_iter(vec![
@@ -175,6 +176,7 @@ fn put_cancel(deps: DepsMut, env: Env) -> Result<Response<CustomResponseMsg>, Co
         }
     }
     let target_contract_info = TARGET_CONTRACT_INFO.load(deps.storage)?;
+    #[allow(deprecated)]
     let contract: Contract = Contract {
         constructor: None,
         functions: BTreeMap::from_iter(vec![
@@ -269,6 +271,7 @@ fn get_tick(deps: Deps) -> i32 {
         }).unwrap(),
     })).unwrap();
     let price = vaa.price_feed.get_current_price().unwrap_or_default();
+    assert_ne!(price.price, 0);
     let price = (price.price as f64) * 10_f64.powi(price.expo);
     price2tick(price) + 50 // ERR 0.5%
 }
