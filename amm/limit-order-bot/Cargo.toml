@@ -48,7 +48,7 @@ schemars = "0.8.10"
 serde = { version = "1.0.140", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 ethabi = "17.1.0"
-pyth-bridge = { path = "../../wormhole/pyth-bridge" }
+eyre = "0.6.8"
 pyth-sdk = "0.4.2"
 hex = "0.4.3"
 

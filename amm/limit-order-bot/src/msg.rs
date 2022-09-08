@@ -1,4 +1,5 @@
 use cosmwasm_std::CustomMsg;
+use pyth_sdk::{PriceFeed, PriceIdentifier};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -34,6 +35,12 @@ pub enum QueryMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum PythBridgeQueryMsg {
+    PriceFeed { id: PriceIdentifier },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct TokenIdList {
     pub list: Vec<u128>,
 }
@@ -52,6 +59,13 @@ pub struct TargetContractInfo {
 pub struct CustomResponseMsg {
     pub target_contract_info: TargetContractInfo,
     pub payload: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct PriceFeedResponse {
+    /// Pyth Price Feed
+    pub price_feed: PriceFeed,
 }
 
 impl CustomMsg for CustomResponseMsg {}

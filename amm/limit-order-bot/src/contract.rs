@@ -7,13 +7,14 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use ethabi::{Contract, Function, Param, ParamType, StateMutability, Token, Uint};
 use hex::encode;
-use pyth_bridge::msg::PriceFeedResponse;
-use pyth_bridge::msg::QueryMsg::PriceFeed;
 use pyth_sdk::PriceIdentifier;
 use std::collections::BTreeMap;
 
 use crate::error::ContractError;
-use crate::msg::{CustomResponseMsg, ExecuteMsg, InstantiateMsg, QueryMsg, TokenIdList};
+use crate::msg::PythBridgeQueryMsg::PriceFeed;
+use crate::msg::{
+    CustomResponseMsg, ExecuteMsg, InstantiateMsg, PriceFeedResponse, QueryMsg, TokenIdList,
+};
 use crate::state::{Deposit, DEPOSIT, ETH_USD, PRICE_CONTRACT, TARGET_CONTRACT_INFO};
 
 // version info for migration info
