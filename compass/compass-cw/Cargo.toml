@@ -1,0 +1,27 @@
+[package]
+name = "compass-cw"
+version = "0.1.0"
+edition = "2021"
+description = "A cosmwasm compass contract"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+backtraces = ["cosmwasm-std/backtraces"]
+# use library feature to disable all init/handle/query exports
+library = []
+
+[dependencies]
+cosmwasm-std = "1.0.0"
+cw-storage-plus = "0.13.4"
+eyre.workspace = true
+hex.workspace = true
+itertools.workspace = true
+ring.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+cosmwasm-schema = "1.0.0"
