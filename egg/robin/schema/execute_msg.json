@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExecuteMsg",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "call"
+      ],
+      "properties": {
+        "call": {
+          "type": "object",
+          "required": [
+            "payload",
+            "target_contract_info"
+          ],
+          "properties": {
+            "payload": {
+              "$ref": "#/definitions/Binary"
+            },
+            "target_contract_info": {
+              "$ref": "#/definitions/TargetContractInfo"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "Binary": {
+      "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>",
+      "type": "string"
+    },
+    "TargetContractInfo": {
+      "type": "object",
+      "required": [
+        "chain_id",
+        "compass_id",
+        "contract_address",
+        "smart_contract_abi"
+      ],
+      "properties": {
+        "chain_id": {
+          "type": "string"
+        },
+        "compass_id": {
+          "type": "string"
+        },
+        "contract_address": {
+          "type": "string"
+        },
+        "smart_contract_abi": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

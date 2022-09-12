@@ -2408,6 +2408,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "robin"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "ethabi",
+ "eyre",
+ "hex",
+ "rand",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "rustc-demangle"
 version = "0.1.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
