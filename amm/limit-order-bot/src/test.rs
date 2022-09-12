@@ -1,9 +1,9 @@
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-use cosmwasm_std::{coins, CosmosMsg, DepsMut};
+use cosmwasm_std::{coins, CosmosMsg};
 use eyre::Result;
 
 use crate::contract::{execute, instantiate};
-use crate::msg::{CustomResponseMsg, ExecuteMsg, InstantiateMsg, TargetContractInfo};
+use crate::msg::{ExecuteMsg, InstantiateMsg, TargetContractInfo};
 
 #[test]
 fn simple_contest() -> Result<()> {
@@ -29,7 +29,7 @@ fn simple_contest() -> Result<()> {
         mock_info("addr0000", &coins(1_000_000, "ugrain")),
         ExecuteMsg::GetDeposit {
             token_id: 0,
-            lower_tick: 1000,
+            sqrt_price_x96: Default::default(),
             deadline: 1000000000000,
         },
     )?;
@@ -40,7 +40,7 @@ fn simple_contest() -> Result<()> {
         mock_info("addr0000", &coins(1000000, "ugrain")),
         ExecuteMsg::GetDeposit {
             token_id: 1,
-            lower_tick: 1000,
+            sqrt_price_x96: Default::default(),
             deadline: 1000,
         },
     )?;

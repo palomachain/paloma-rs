@@ -1,4 +1,4 @@
-use cosmwasm_std::CustomMsg;
+use cosmwasm_std::{CustomMsg, Uint256};
 use pyth_sdk::{PriceFeed, PriceIdentifier};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -14,7 +14,7 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     GetDeposit {
         token_id: u128,
-        lower_tick: i32,
+        sqrt_price_x96: Uint256,
         deadline: u64,
     },
     PutWithdraw {},

@@ -1,14 +1,15 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order, QueryRequest, Response,
-    StdResult, WasmQuery,
+    to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, Isqrt, MessageInfo, Order, QueryRequest,
+    Response, StdResult, Uint256, Uint512, WasmQuery,
 };
 use cw2::set_contract_version;
 use ethabi::{Contract, Function, Param, ParamType, StateMutability, Token, Uint};
 use hex::encode;
 use pyth_sdk::PriceIdentifier;
 use std::collections::BTreeMap;
+use std::ops::{Div, Mul};
 
 use crate::error::ContractError;
 use crate::msg::PythBridgeQueryMsg::PriceFeed;
@@ -44,9 +45,9 @@ pub fn execute(
     match msg {
         ExecuteMsg::GetDeposit {
             token_id,
-            lower_tick,
+            sqrt_price_x96,
             deadline,
-        } => get_deposit(deps, token_id, lower_tick, deadline),
+        } => get_deposit(deps, token_id, sqrt_price_x96, deadline),
         ExecuteMsg::PutWithdraw {} => put_withdraw(deps),
         ExecuteMsg::GetWithdraw { token_ids } => get_withdraw(deps, token_ids),
         ExecuteMsg::PutCancel {} => put_cancel(deps, env),
@@ -57,14 +58,14 @@ pub fn execute(
 fn get_deposit(
     deps: DepsMut,
     token_id: u128,
-    lower_tick: i32,
+    sqrt_price_x96: Uint256,
     deadline: u64,
 ) -> Result<Response<CustomResponseMsg>, ContractError> {
     DEPOSIT.save(
         deps.storage,
         token_id,
         &Deposit {
-            lower_tick,
+            sqrt_price_x96,
             deadline,
         },
     )?;
@@ -72,12 +73,12 @@ fn get_deposit(
 }
 
 fn put_withdraw(deps: DepsMut) -> Result<Response<CustomResponseMsg>, ContractError> {
-    let tick = get_tick(deps.as_ref());
+    let sqrt_price_x96 = get_sqrt_price_x96(deps.as_ref());
     let range = DEPOSIT.range(deps.storage, None, None, Order::Ascending);
     let mut token_ids: Vec<u128> = Vec::new();
     for item in range {
         let (token_id, deposit) = item.unwrap();
-        if tick < deposit.lower_tick {
+        if sqrt_price_x96 < deposit.sqrt_price_x96 {
             token_ids.push(token_id);
         }
     }
@@ -263,7 +264,7 @@ fn get_cancel(
     Ok(Response::new())
 }
 
-fn get_tick(deps: Deps) -> i32 {
+fn get_sqrt_price_x96(deps: Deps) -> Uint256 {
     let pyth_bridge_contract = PRICE_CONTRACT.load(deps.storage).unwrap();
     let vaa: PriceFeedResponse = deps
         .querier
@@ -277,13 +278,19 @@ fn get_tick(deps: Deps) -> i32 {
         .unwrap();
     let price = vaa.price_feed.get_current_price().unwrap_or_default();
     assert_ne!(price.price, 0);
-    let price = (price.price as f64) * 10_f64.powi(price.expo);
-    price2tick(price) + 50 // ERR 0.5%
-}
-
-fn price2tick(price: f64) -> i32 {
-    let ratio = 1_000_000_000_000.0 / price;
-    ratio.log(1.0001).floor() as i32
+    let mut ret = Uint512::from(price.price as u64)
+        .mul(Uint512::from(1_u128 << 96).mul(Uint512::from(1_u128 << 96)));
+    let mut expo = price.expo;
+    while expo != 0 {
+        if expo > 0 {
+            ret = ret.mul(Uint512::from(10_u8));
+            expo -= 1;
+        } else {
+            ret = ret.div(Uint512::from(10_u8));
+            expo += 1;
+        }
+    }
+    ret.isqrt().try_into().unwrap()
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -302,13 +309,13 @@ fn deposit_list(deps: Deps) -> StdResult<TokenIdList> {
 }
 
 fn withdrawable_list(deps: Deps) -> StdResult<TokenIdList> {
-    let tick = get_tick(deps);
+    let sqrt_price_x96 = get_sqrt_price_x96(deps);
     let mut token_ids: Vec<u128> = Vec::new();
     let range = DEPOSIT.range(deps.storage, None, None, Order::Ascending);
     for x in range {
-        let x = x?;
-        if tick < x.1.lower_tick {
-            token_ids.push(x.0);
+        let (token_id, deposit) = x.unwrap();
+        if sqrt_price_x96 < deposit.sqrt_price_x96 {
+            token_ids.push(token_id);
         }
     }
     Ok(TokenIdList { list: token_ids })

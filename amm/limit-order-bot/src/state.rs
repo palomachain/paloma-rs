@@ -1,3 +1,4 @@
+use cosmwasm_std::Uint256;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -6,7 +7,7 @@ use cw_storage_plus::{Item, Map};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Deposit {
-    pub lower_tick: i32,
+    pub sqrt_price_x96: Uint256,
     pub deadline: u64,
 }
 
