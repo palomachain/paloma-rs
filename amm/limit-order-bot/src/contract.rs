@@ -51,7 +51,6 @@ pub fn execute(
         ExecuteMsg::PutWithdraw {} => put_withdraw(deps),
         ExecuteMsg::GetWithdraw { token_ids } => get_withdraw(deps, token_ids),
         ExecuteMsg::PutCancel {} => put_cancel(deps, env),
-        ExecuteMsg::GetCancel { token_ids } => get_cancel(deps, token_ids),
     }
 }
 
@@ -254,16 +253,6 @@ fn put_cancel(deps: DepsMut, env: Env) -> Result<Response<CustomResponseMsg>, Co
     }
 }
 
-fn get_cancel(
-    deps: DepsMut,
-    token_ids: Vec<u128>,
-) -> Result<Response<CustomResponseMsg>, ContractError> {
-    for token_id in token_ids {
-        DEPOSIT.remove(deps.storage, token_id);
-    }
-    Ok(Response::new())
-}
-
 fn get_sqrt_price_x96(deps: Deps) -> Uint256 {
     let pyth_bridge_contract = PRICE_CONTRACT.load(deps.storage).unwrap();
     let vaa: PriceFeedResponse = deps
@@ -294,10 +283,11 @@ fn get_sqrt_price_x96(deps: Deps) -> Uint256 {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::DepositList {} => to_binary(&deposit_list(deps)?),
         QueryMsg::WithdrawableList {} => to_binary(&withdrawable_list(deps)?),
+        QueryMsg::CancelableList {} => to_binary(&cancelable_list(deps, env)?),
     }
 }
 
@@ -315,6 +305,18 @@ fn withdrawable_list(deps: Deps) -> StdResult<TokenIdList> {
     for x in range {
         let (token_id, deposit) = x.unwrap();
         if sqrt_price_x96 < deposit.sqrt_price_x96 {
+            token_ids.push(token_id);
+        }
+    }
+    Ok(TokenIdList { list: token_ids })
+}
+
+fn cancelable_list(deps: Deps, env: Env) -> StdResult<TokenIdList> {
+    let mut token_ids: Vec<u128> = Vec::new();
+    let range = DEPOSIT.range(deps.storage, None, None, Order::Ascending);
+    for x in range {
+        let (token_id, deposit) = x.unwrap();
+        if env.block.time.seconds() > deposit.deadline {
             token_ids.push(token_id);
         }
     }

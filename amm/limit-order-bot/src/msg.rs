@@ -18,11 +18,8 @@ pub enum ExecuteMsg {
         deadline: u64,
     },
     PutWithdraw {},
-    GetWithdraw {
-        token_ids: Vec<u128>,
-    },
     PutCancel {},
-    GetCancel {
+    GetWithdraw {
         token_ids: Vec<u128>,
     },
 }
@@ -32,6 +29,7 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     DepositList {},
     WithdrawableList {},
+    CancelableList {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
