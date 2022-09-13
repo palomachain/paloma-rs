@@ -183,7 +183,6 @@ dependencies = [
  "cw-storage-plus",
  "cw2",
  "cw20",
- "integer-sqrt",
  "proptest",
  "protobuf",
  "schemars",
@@ -204,7 +203,6 @@ dependencies = [
  "cw-storage-plus",
  "cw2",
  "cw20",
- "integer-sqrt",
  "proptest",
  "protobuf",
  "schemars",
@@ -245,7 +243,6 @@ dependencies = [
  "cw-storage-plus",
  "cw2",
  "cw20",
- "integer-sqrt",
  "schemars",
  "serde",
  "thiserror",
@@ -281,7 +278,6 @@ dependencies = [
  "cw20-base",
  "schemars",
  "serde",
- "snafu",
 ]
 
 [[package]]
@@ -312,7 +308,6 @@ dependencies = [
  "cosmwasm-std",
  "cw-multi-test",
  "cw-storage-plus",
- "cw0",
  "cw1",
  "cw2",
  "derivative",
@@ -335,7 +330,6 @@ dependencies = [
  "cw20-base",
  "schemars",
  "serde",
- "snafu",
 ]
 
 [[package]]
@@ -1035,12 +1029,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "doc-comment"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
-
-[[package]]
 name = "dyn-clone"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1427,12 +1415,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "heck"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2540771e65fc8cb83cd6e8a237f70c319bd5c29f78ed1084ba5d50eeac86f7f9"
-
-[[package]]
 name = "hermit-abi"
 version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1551,15 +1533,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a5bbe824c507c5da5956355e86a746d82e0e1464f65d862cc5e71da70e94b2c"
 dependencies = [
  "cfg-if",
-]
-
-[[package]]
-name = "integer-sqrt"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "276ec31bcb4a9ee45f58bec6f9ec700ae4cf4f4f8f2fa7e06cb406bd5ffdd770"
-dependencies = [
- "num-traits",
 ]
 
 [[package]]
@@ -2397,11 +2370,8 @@ version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-storage-plus",
- "ethabi",
  "eyre",
  "hex",
- "rand",
  "schemars",
  "serde",
  "serde_json",
@@ -2606,28 +2576,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2fd0db749597d91ff862fd1d55ea87f7855a744a8425a64695b6fca237d1dad1"
 
 [[package]]
-name = "snafu"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5177903bf45656592d9eb5c0e22f408fc023aae51dbe2088889b71633ba451f2"
-dependencies = [
- "doc-comment",
- "snafu-derive",
-]
-
-[[package]]
-name = "snafu-derive"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "410b26ed97440d90ced3e2488c868d56a86e2064f5d7d6f417909b286afe25e5"
-dependencies = [
- "heck",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "spki"
 version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2747,7 +2695,6 @@ dependencies = [
  "generic-array",
  "hex",
  "k256 0.9.6",
- "lazy_static",
  "schemars",
  "serde",
  "serde_json",

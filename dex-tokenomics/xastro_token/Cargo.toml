@@ -26,7 +26,6 @@ cw20 = "0.13.4"
 cw20-base = { version = "0.13.4", features = ["library"] }
 schemars = "0.8.10"
 serde = { version = "1.0.140", default-features = false, features = ["derive"] }
-snafu = "0.7.1"
 
 [dev-dependencies]
 cosmwasm-schema = "1.0.0"
