@@ -6,7 +6,6 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use ethabi::{Contract, Function, Param, ParamType, StateMutability, Token, Uint};
-use hex::encode;
 use pyth_sdk::PriceIdentifier;
 use std::collections::BTreeMap;
 use std::ops::{Div, Mul};
@@ -127,7 +126,7 @@ fn put_withdraw(deps: DepsMut) -> Result<Response<CustomResponseMsg>, ContractEr
         1 => Ok(
             Response::new().add_message(CosmosMsg::Custom(CustomResponseMsg {
                 target_contract_info,
-                payload: encode(
+                payload: Binary(
                     contract
                         .function("withdraw")
                         .unwrap()
@@ -144,7 +143,7 @@ fn put_withdraw(deps: DepsMut) -> Result<Response<CustomResponseMsg>, ContractEr
             Ok(
                 Response::new().add_message(CosmosMsg::Custom(CustomResponseMsg {
                     target_contract_info,
-                    payload: encode(
+                    payload: Binary(
                         contract
                             .function("multiple_withdraw")
                             .unwrap()
@@ -223,7 +222,7 @@ fn put_cancel(deps: DepsMut, env: Env) -> Result<Response<CustomResponseMsg>, Co
         1 => Ok(
             Response::new().add_message(CosmosMsg::Custom(CustomResponseMsg {
                 target_contract_info,
-                payload: encode(
+                payload: Binary(
                     contract
                         .function("withdraw")
                         .unwrap()
@@ -240,7 +239,7 @@ fn put_cancel(deps: DepsMut, env: Env) -> Result<Response<CustomResponseMsg>, Co
             Ok(
                 Response::new().add_message(CosmosMsg::Custom(CustomResponseMsg {
                     target_contract_info,
-                    payload: encode(
+                    payload: Binary(
                         contract
                             .function("multiple_cancel")
                             .unwrap()

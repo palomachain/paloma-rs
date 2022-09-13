@@ -1750,7 +1750,6 @@ dependencies = [
  "cw2 0.14.0",
  "ethabi",
  "eyre",
- "hex",
  "pyth-sdk",
  "schemars",
  "serde",

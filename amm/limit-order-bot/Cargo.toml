@@ -50,7 +50,6 @@ thiserror = { version = "1.0.31" }
 ethabi = "17.1.0"
 eyre = "0.6.8"
 pyth-sdk = "0.4.2"
-hex = "0.4.3"
 
 [dev-dependencies]
 cosmwasm-schema = "1.0.0"

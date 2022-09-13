@@ -1,4 +1,4 @@
-use cosmwasm_std::{CustomMsg, Uint256};
+use cosmwasm_std::{Binary, CustomMsg, Uint256};
 use pyth_sdk::{PriceFeed, PriceIdentifier};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -56,7 +56,7 @@ pub struct TargetContractInfo {
 #[serde(rename_all = "snake_case")]
 pub struct CustomResponseMsg {
     pub target_contract_info: TargetContractInfo,
-    pub payload: String,
+    pub payload: Binary,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
