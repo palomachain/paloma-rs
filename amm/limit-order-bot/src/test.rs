@@ -66,7 +66,7 @@ fn simple_contest() -> Result<()> {
         deadline: 0,
     };
     let _ = router
-        .execute_contract(owner.clone(), mocked_main_contract_addr.clone(), &msg, &[])
+        .execute_contract(owner, mocked_main_contract_addr.clone(), &msg, &[])
         .unwrap();
     let msg = QueryMsg::DepositList {};
     let result: TokenIdList = router
