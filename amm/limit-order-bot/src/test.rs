@@ -6,7 +6,10 @@ use schemars::JsonSchema;
 
 use crate::contract::{execute, instantiate, query};
 use crate::msg::PythBridgeQueryMsg::PriceFeed;
-use crate::msg::{CustomResponseMsg, ExecuteMsg, InstantiateMsg, PriceFeedResponse, PythBridgeQueryMsg, QueryMsg, TargetContractInfo, TokenIdList};
+use crate::msg::{
+    CustomResponseMsg, ExecuteMsg, InstantiateMsg, PriceFeedResponse, PythBridgeQueryMsg, QueryMsg,
+    TargetContractInfo, TokenIdList,
+};
 use crate::ContractError;
 
 #[test]
@@ -66,7 +69,10 @@ fn simple_contest() -> Result<()> {
         .execute_contract(owner.clone(), mocked_main_contract_addr.clone(), &msg, &[])
         .unwrap();
     let msg = QueryMsg::DepositList {};
-    let result: TokenIdList = router.wrap().query_wasm_smart(mocked_main_contract_addr, &msg).unwrap();
+    let result: TokenIdList = router
+        .wrap()
+        .query_wasm_smart(mocked_main_contract_addr, &msg)
+        .unwrap();
     assert_eq!(result.list.len(), 1);
     Ok(())
 }
@@ -125,6 +131,5 @@ where
 }
 
 fn mock_app() -> BasicApp<CustomResponseMsg> {
-    // App::default()
     custom_app::<CustomResponseMsg, Empty, _>(|_, _, _| {})
 }
