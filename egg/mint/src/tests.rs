@@ -25,10 +25,10 @@ fn simple_contest() -> Result<()> {
 
     let msg = InstantiateMsg {
         target_contract_info: TargetContractInfo {
-            method: "".to_string(),
             chain_id: "".to_string(),
             compass_id: "".to_string(),
             contract_address: "".to_string(),
+            smart_contract_abi: "".to_string(),
         },
     };
     let info = mock_info("admin0000", &[]);
@@ -86,10 +86,10 @@ fn simple_errors() -> Result<()> {
 
     let msg = InstantiateMsg {
         target_contract_info: TargetContractInfo {
-            method: "".to_string(),
             chain_id: "".to_string(),
             compass_id: "".to_string(),
             contract_address: "".to_string(),
+            smart_contract_abi: "".to_string(),
         },
     };
     let info = mock_info("admin0000", &[]);

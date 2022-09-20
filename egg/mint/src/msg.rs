@@ -12,10 +12,10 @@ pub struct InstantiateMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct TargetContractInfo {
-    pub method: String,
     pub chain_id: String,
     pub compass_id: String,
     pub contract_address: String,
+    pub smart_contract_abi: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
