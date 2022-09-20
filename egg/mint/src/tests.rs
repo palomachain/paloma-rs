@@ -1,5 +1,5 @@
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-use cosmwasm_std::{coins, DepsMut};
+use cosmwasm_std::{coins, Binary, DepsMut};
 use eyre::Result;
 use std::collections::HashMap;
 
@@ -29,7 +29,6 @@ fn simple_contest() -> Result<()> {
             chain_id: "".to_string(),
             compass_id: "".to_string(),
             contract_address: "".to_string(),
-            smart_contract_abi: "".to_string(),
         },
     };
     let info = mock_info("admin0000", &[]);
@@ -41,7 +40,9 @@ fn simple_contest() -> Result<()> {
         deps.as_mut(),
         mock_env(),
         mock_info("admin0000", &[]),
-        ExecuteMsg::PickWinner {},
+        ExecuteMsg::PickWinner {
+            payload: Binary(vec![]),
+        },
     )?;
     let attributes: HashMap<_, _> = r
         .attributes
@@ -60,7 +61,9 @@ fn simple_contest() -> Result<()> {
         deps.as_mut(),
         mock_env(),
         mock_info("admin0000", &[]),
-        ExecuteMsg::PickWinner {},
+        ExecuteMsg::PickWinner {
+            payload: Binary(vec![]),
+        },
     )?;
     let attributes: HashMap<_, _> = r
         .attributes
@@ -87,7 +90,6 @@ fn simple_errors() -> Result<()> {
             chain_id: "".to_string(),
             compass_id: "".to_string(),
             contract_address: "".to_string(),
-            smart_contract_abi: "".to_string(),
         },
     };
     let info = mock_info("admin0000", &[]);
@@ -101,7 +103,9 @@ fn simple_errors() -> Result<()> {
         deps.as_mut(),
         mock_env(),
         mock_info("addr0000", &[]),
-        ExecuteMsg::PickWinner {},
+        ExecuteMsg::PickWinner {
+            payload: Binary(vec![])
+        },
     )
     .is_err());
 
@@ -112,7 +116,9 @@ fn simple_errors() -> Result<()> {
         deps.as_mut(),
         mock_env(),
         mock_info("admin0000", &[]),
-        ExecuteMsg::PickWinner {},
+        ExecuteMsg::PickWinner {
+            payload: Binary(vec![]),
+        },
     )?;
     // We won't let them re-enter with those addresses.
     assert!(add_entrant(deps.as_mut(), 0, ENTRANCE_FEE).is_err());

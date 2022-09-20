@@ -42,7 +42,7 @@ pub fn execute(
 ) -> Result<Response<CustomResponseMsg>> {
     match msg {
         ExecuteMsg::LayEgg { eth_address } => lay_egg(deps, env, info, eth_address),
-        ExecuteMsg::PickWinner {} => pick_winner(deps, env, info),
+        ExecuteMsg::PickWinner { payload } => pick_winner(deps, env, info, payload),
     }
 }
 
@@ -80,7 +80,12 @@ fn lay_egg(
     Ok(Response::new())
 }
 
-fn pick_winner(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response<CustomResponseMsg>> {
+fn pick_winner(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    payload: Binary,
+) -> Result<Response<CustomResponseMsg>> {
     ensure_eq!(info.sender, ADMIN.load(deps.storage)?, eyre!("forbidden"));
 
     let mut paloma_winners = PALOMA_WINNERS.load(deps.storage)?;
@@ -103,15 +108,10 @@ fn pick_winner(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response<Cu
     ETH_WINNERS.save(deps.storage, &eth_winners)?;
 
     let target_contract_info = TARGET_CONTRACT_INFO.load(deps.storage)?;
-    let eth_address = hex::decode(eth_address_str.strip_prefix("0x").unwrap()).unwrap();
-    let eth_address = ethabi::ethereum_types::Address::from_slice(&eth_address);
-    let eth_address = ethabi::Token::Address(eth_address);
-    let eth_address = ethabi::encode(&[eth_address]);
     Ok(Response::new()
         .add_message(CosmosMsg::Custom(CustomResponseMsg {
             target_contract_info,
-            paloma_address: paloma_address.clone(),
-            eth_address,
+            payload,
         }))
         .add_attribute("winning_paloma_address", &paloma_address)
         .add_attribute("winning_eth_address", &eth_address_str))
