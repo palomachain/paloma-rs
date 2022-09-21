@@ -17,7 +17,6 @@
         "chain_id",
         "compass_id",
         "contract_address",
-        "method",
         "smart_contract_abi"
       ],
       "properties": {
@@ -28,9 +27,6 @@
           "type": "string"
         },
         "contract_address": {
-          "type": "string"
-        },
-        "method": {
           "type": "string"
         },
         "smart_contract_abi": {

@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InstantiateMsg",
+  "description": "This structure describes the parameters used for creating a contract.",
+  "type": "object",
+  "required": [
+    "deposit_token_addr",
+    "owner",
+    "token_code_id"
+  ],
+  "properties": {
+    "deposit_token_addr": {
+      "description": "The ASTRO token contract address",
+      "type": "string"
+    },
+    "owner": {
+      "description": "The contract owner address",
+      "type": "string"
+    },
+    "token_code_id": {
+      "description": "CW20 token code identifier",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    }
+  }
+}
