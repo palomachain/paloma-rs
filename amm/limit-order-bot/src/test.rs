@@ -1,10 +1,9 @@
-use std::ops::Mul;
-// use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{to_binary, Addr, Binary, Empty, Response, StdResult, Uint256};
 use cw_multi_test::{custom_app, BasicApp, Contract, ContractWrapper, Executor};
 use eyre::Result;
 use pyth_sdk::PriceStatus;
 use schemars::JsonSchema;
+use std::ops::Mul;
 
 use crate::contract::{execute, instantiate, query};
 use crate::msg::PythBridgeQueryMsg::PriceFeed;
@@ -116,15 +115,7 @@ where
     >: Contract<T>,
     T: Clone + std::fmt::Debug + PartialEq + JsonSchema,
 {
-    let contract: ContractWrapper<
-        ExecuteMsg,
-        InstantiateMsg,
-        PythBridgeQueryMsg,
-        cosmwasm_std::StdError,
-        cosmwasm_std::StdError,
-        cosmwasm_std::StdError,
-        CustomResponseMsg,
-    > = ContractWrapper::new(
+    let contract: ContractWrapper<_, _, _, _, _, _, _> = ContractWrapper::new(
         |_, _, _, _| -> StdResult<Response<CustomResponseMsg>> { Ok(Response::new()) },
         |_, _, _, _| -> StdResult<Response<CustomResponseMsg>> { Ok(Response::new()) },
         |_, _, msg| -> StdResult<Binary> {
