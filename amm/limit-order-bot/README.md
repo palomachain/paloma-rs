@@ -1,100 +1,96 @@
-# CosmWasm Starter Pack
+# Limit Order Bot CosmWasm Smart Contract for Paloma
 
-This is a template to build smart contracts in Rust to run inside a
-[Cosmos SDK](https://github.com/cosmos/cosmos-sdk) module on all chains that enable it.
-To understand the framework better, please read the overview in the
-[cosmwasm repo](https://github.com/CosmWasm/cosmwasm/blob/master/README.md),
-and dig into the [cosmwasm docs](https://www.cosmwasm.com).
-This assumes you understand the theory and just want to get coding.
+This is a CosmWasm smart contract to manage limit-orders on Ethereum limit-order-bot smart contract in Vyper.
 
-## Creating a new repo from template
+Users can deposit Eth into Vyper smart contract on Ethereum.
 
-Assuming you have a recent version of rust and cargo (v1.58.1+) installed
-(via [rustup](https://rustup.rs/)),
-then the following should get you a new repo to start a contract:
+The smart contract will add liquidity to expected price between current price.
 
-Install [cargo-generate](https://github.com/ashleygwilliams/cargo-generate) and cargo-run-script.
-Unless you did that before, run this line now:
+This deposit requires Eth only.
 
-```sh
-cargo install cargo-generate --features vendored-openssl
-cargo install cargo-run-script
-```
+When Eth price gets the expected price, the liquidity is withdrawn to the user.
 
-Now, use it to create your new contract.
-Go to the folder in which you want to place it and run:
+So the users can get desired amount of USDC and additional some USDC and Eth from liquidity fee.
+
+## ExecuteMsg
+
+### GetDeposit
+
+Get deposit information from Vyper contract.
+
+| Key            | Type    | Description                         |
+|----------------|---------|-------------------------------------|
+| token_id       | u128    | Uniswap V3 NFLP token_id            |
+| sqrt_price_x96 | Uint256 | sqrtpricex96 value of the liquidity |
+| deadline       | u64     | deadline of limit-order             |
+
+### PutWithdraw
+
+Run withdraw transaction for orders that reaches to the expected price to Vyper contract via pigeons.
+
+| Key | Type | Description |
+|-----|------|-------------|
+| -   | -    | -           |
 
 
-**Latest: 1.0.0**
+### PutCancel
 
-```sh
-cargo generate --git https://github.com/CosmWasm/cw-template.git --name PROJECT_NAME
-````
+Run cancel transaction for orders that reaches to the deadline to Vyper contract via pigeons.
 
-For cloning minimal code repo:
+| Key | Type | Description |
+|-----|------|-------------|
+| -   | -    | -           |
 
-```sh
-cargo generate --git https://github.com/CosmWasm/cw-template.git --branch 1.0-minimal --name PROJECT_NAME
-```
+### GetWithdraw
 
-**Older Version**
+Get withdraw / cancel information from Vyper contract.
 
-Pass version as branch flag:
+| Key       | Type      | Description                         |
+|-----------|-----------|-------------------------------------|
+| token_ids | Vec<u128> | withdrawn or canceled token id list |
 
-```sh
-cargo generate --git https://github.com/CosmWasm/cw-template.git --branch <version> --name PROJECT_NAME
-````
+## QueryMsg
 
-Example:
+### DepositList
 
-```sh
-cargo generate --git https://github.com/CosmWasm/cw-template.git --branch 0.16 --name PROJECT_NAME
-```
+Get deposited token_id list.
 
-You will now have a new folder called `PROJECT_NAME` (I hope you changed that to something else)
-containing a simple working contract and build system that you can customize.
+| Key | Type | Description |
+|-----|------|-------------|
+| -   | -    | -           |
 
-## Create a Repo
+#### Response
 
-After generating, you have a initialized local git repo, but no commits, and no remote.
-Go to a server (eg. github) and create a new upstream repo (called `YOUR-GIT-URL` below).
-Then run the following:
+| Key           | Type      | Description                   |
+|---------------|-----------|-------------------------------|
+| list          | Vec<u128> | Uniswap V3 NFLP token_id list |
 
-```sh
-# this is needed to create a valid Cargo.lock file (see below)
-cargo check
-git branch -M main
-git add .
-git commit -m 'Initial Commit'
-git remote add origin YOUR-GIT-URL
-git push -u origin main
-```
+### WithdrawableList
 
-## CI Support
+Get token_id list that reach to expected price.
 
-We have template configurations for both [GitHub Actions](.github/workflows/Basic.yml)
-and [Circle CI](.circleci/config.yml) in the generated project, so you can
-get up and running with CI right away.
+| Key | Type | Description |
+|-----|------|-------------|
+| -   | -    | -           |
 
-One note is that the CI runs all `cargo` commands
-with `--locked` to ensure it uses the exact same versions as you have locally. This also means
-you must have an up-to-date `Cargo.lock` file, which is not auto-generated.
-The first time you set up the project (or after adding any dep), you should ensure the
-`Cargo.lock` file is updated, so the CI will test properly. This can be done simply by
-running `cargo check` or `cargo unit-test`.
+#### Response
 
-## Using your project
+| Key           | Type      | Description                   |
+|---------------|-----------|-------------------------------|
+| list          | Vec<u128> | Uniswap V3 NFLP token_id list |
 
-Once you have your custom repo, you should check out [Developing](./Developing.md) to explain
-more on how to run tests and develop code. Or go through the
-[online tutorial](https://docs.cosmwasm.com/) to get a better feel
-of how to develop.
 
-[Publishing](./Publishing.md) contains useful information on how to publish your contract
-to the world, once you are ready to deploy it on a running blockchain. And
-[Importing](./Importing.md) contains information about pulling in other contracts or crates
-that have been published.
+### CancelableList
 
-Please replace this README file with information about your specific project. You can keep
-the `Developing.md` and `Publishing.md` files as useful referenced, but please set some
-proper description in the README.
+Get token_id list that reach to deadline.
+
+| Key | Type | Description |
+|-----|------|-------------|
+| -   | -    | -           |
+
+#### Response
+
+| Key           | Type      | Description                   |
+|---------------|-----------|-------------------------------|
+| list          | Vec<u128> | Uniswap V3 NFLP token_id list |
+

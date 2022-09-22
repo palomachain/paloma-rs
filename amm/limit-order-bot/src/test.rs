@@ -1,7 +1,9 @@
+use std::ops::Mul;
 // use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-use cosmwasm_std::{to_binary, Addr, Binary, Empty, Response, StdResult};
+use cosmwasm_std::{to_binary, Addr, Binary, Empty, Response, StdResult, Uint256};
 use cw_multi_test::{custom_app, BasicApp, Contract, ContractWrapper, Executor};
 use eyre::Result;
+use pyth_sdk::PriceStatus;
 use schemars::JsonSchema;
 
 use crate::contract::{execute, instantiate, query};
@@ -66,9 +68,33 @@ fn simple_contest() -> Result<()> {
         deadline: 0,
     };
     let _ = router
+        .execute_contract(owner.clone(), mocked_main_contract_addr.clone(), &msg, &[])
+        .unwrap();
+
+    let msg = ExecuteMsg::GetDeposit {
+        token_id: 1,
+        sqrt_price_x96: Uint256::from(2_u128.pow(96)).mul(Uint256::from(100_u128)),
+        deadline: 9999999999,
+    };
+    let _ = router
         .execute_contract(owner, mocked_main_contract_addr.clone(), &msg, &[])
         .unwrap();
+
     let msg = QueryMsg::DepositList {};
+    let result: TokenIdList = router
+        .wrap()
+        .query_wasm_smart(mocked_main_contract_addr.clone(), &msg)
+        .unwrap();
+    assert_eq!(result.list.len(), 2);
+
+    let msg = QueryMsg::WithdrawableList {};
+    let result: TokenIdList = router
+        .wrap()
+        .query_wasm_smart(mocked_main_contract_addr.clone(), &msg)
+        .unwrap();
+    assert_eq!(result.list.len(), 1);
+
+    let msg = QueryMsg::CancelableList {};
     let result: TokenIdList = router
         .wrap()
         .query_wasm_smart(mocked_main_contract_addr, &msg)
@@ -104,7 +130,22 @@ where
         |_, _, msg| -> StdResult<Binary> {
             match msg {
                 PriceFeed { .. } => to_binary(&PriceFeedResponse {
-                    price_feed: Default::default(),
+                    price_feed: pyth_sdk::PriceFeed::new(
+                        Default::default(),
+                        PriceStatus::Trading,
+                        0,
+                        0,
+                        0,
+                        0,
+                        Default::default(),
+                        1000,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                    ),
                 }),
             }
         },
