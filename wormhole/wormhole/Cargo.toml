@@ -17,14 +17,14 @@ library = []
 [dependencies]
 cosmwasm-std = "1.0.0"
 cosmwasm-storage = { version = "1.0.0" }
-schemars = "0.8.10"
-serde = { version = "1.0.140", default-features = false, features = ["derive"] }
-thiserror = "1.0.31"
+schemars.workspace = true
+serde.workspace = true
+thiserror.workspace = true
 k256 = { version = "0.9.4", default-features = false, features = ["ecdsa"] }
 getrandom = { version = "0.2.7", features = ["custom"] }
-sha3 = { version = "0.10.1", default-features = false }
+sha3.workspace = true
 generic-array = "0.14.5"
-hex = "0.4.3"
+hex.workspace = true
 
 [dev-dependencies]
-serde_json = "1.0.82"
+serde_json.workspace = true

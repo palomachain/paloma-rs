@@ -29,15 +29,15 @@ cosmwasm-std = "1.0.0"
 cw-storage-plus = "0.13.4"
 cw2 = "0.13.4"
 cw20 = "0.13.4"
-protobuf = { version = "2.27.1", features = ["with-bytes"] }
-schemars = "0.8.10"
-serde = { version = "1.0.140", default-features = false, features = ["derive"] }
-thiserror = "1.0.31"
+protobuf.workspace = true
+schemars.workspace = true
+serde.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
 astroport-factory = { path = "../factory" }
 astroport-token = { path = "../token" }
 cosmwasm-schema = "1.0.0"
 cw-multi-test = "0.13.4"
-proptest = "1.0.0"
+proptest.workspace = true
 sim = { git = "https://github.com/astroport-fi/astroport-sims.git", rev = "d617510737ee2c529d3aaa7afbdac5ccb5a385c9", package = "sim" }

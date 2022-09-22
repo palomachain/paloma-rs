@@ -25,9 +25,9 @@ cosmwasm-std = "1.0.0"
 cw-storage-plus = "0.13.4"
 cw2 = "0.13.4"
 cw20 = "0.13.4"
-schemars = "0.8.10"
-serde = { version = "1.0.140", default-features = false, features = ["derive"] }
-thiserror = "1.0.31"
+schemars.workspace = true
+serde.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
 astroport-factory = {path = "../factory" }

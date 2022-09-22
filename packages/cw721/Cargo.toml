@@ -12,8 +12,8 @@ documentation = "https://docs.cosmwasm.com"
 [dependencies]
 cw0 = "0.10.3"
 cosmwasm-std = "1.0.0"
-schemars = "0.8.10"
-serde = { version = "1.0.140", default-features = false, features = ["derive"] }
+schemars.workspace = true
+serde.workspace = true
 
 [dev-dependencies]
 cosmwasm-schema = "1.0.0"

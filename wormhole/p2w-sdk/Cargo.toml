@@ -10,7 +10,7 @@ description = "Pyth to Wormhole SDK"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-hex = "0.4.3"
+hex.workspace = true
 pyth-sdk = "0.4.2"
 pyth-sdk-solana = { path = "../pyth-sdk-solana" }
-serde = { version = "1.0.140", default-features = false, features = ["derive"] }
+serde.workspace = true
