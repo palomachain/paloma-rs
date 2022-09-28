@@ -16,7 +16,6 @@ library = []
 cosmwasm-std = "1.0.0"
 cw-storage-plus = "0.13.4"
 eyre.workspace = true
-hex.workspace = true
 itertools.workspace = true
 ring.workspace = true
 schemars.workspace = true

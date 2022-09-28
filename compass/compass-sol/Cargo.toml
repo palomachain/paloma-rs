@@ -1,0 +1,18 @@
+[package]
+name = "compass-sol"
+version = "0.1.0"
+edition = "2021"
+description = "A solana compass contract"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# use library feature to disable all init/handle/query exports
+library = []
+
+[dependencies]
+anchor-lang.workspace = true
+borsh.workspace = true
+libsecp256k1.workspace = true
+serde.workspace = true
