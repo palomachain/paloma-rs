@@ -1,8 +1,9 @@
-use crate::msg::{CustomResponseMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use cosmwasm_std::{
     to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
 };
 use eyre::Result;
+use xcci::ExecutePalomaJob;
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -28,13 +29,13 @@ pub fn execute(
     _env: Env,
     _info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response<CustomResponseMsg>> {
+) -> Result<Response<ExecutePalomaJob>> {
     let ExecuteMsg::Call {
         target_contract_info,
         payload,
     } = msg;
     Ok(
-        Response::new().add_message(CosmosMsg::Custom(CustomResponseMsg {
+        Response::new().add_message(CosmosMsg::Custom(ExecutePalomaJob {
             target_contract_info,
             payload,
         })),

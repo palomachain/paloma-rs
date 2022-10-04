@@ -18,6 +18,7 @@ eyre.workspace = true
 hex.workspace = true
 schemars.workspace = true
 serde.workspace = true
+xcci.workspace = true
 
 [dev-dependencies]
 cosmwasm-schema = "1.0.0"

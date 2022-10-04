@@ -1,0 +1,10 @@
+[package]
+name = "xcci"
+version = "0.1.0"
+edition = "2021"
+description = "Cross chain call interface for Paloma"
+
+[dependencies]
+cosmwasm-std.workspace = true
+schemars.workspace = true
+serde.workspace = true

@@ -1,4 +1,4 @@
-use crate::msg::{CustomResponseMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::{ADMIN, ENTRANTS, ETH_WINNERS, PALOMA_WINNERS, TARGET_CONTRACT_INFO};
 use cosmwasm_std::{
     coin, ensure_eq, to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order,
@@ -8,6 +8,7 @@ use eyre::{bail, ensure, eyre, Result};
 use rand::seq::IteratorRandom;
 use rand::SeedableRng;
 use std::collections::HashSet;
+use xcci::ExecutePalomaJob;
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -39,7 +40,7 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response<CustomResponseMsg>> {
+) -> Result<Response<ExecutePalomaJob>> {
     match msg {
         ExecuteMsg::LayEgg { eth_address } => lay_egg(deps, env, info, eth_address),
         ExecuteMsg::PickWinner { payload } => pick_winner(deps, env, info, payload),
@@ -51,7 +52,7 @@ fn lay_egg(
     _env: Env,
     info: MessageInfo,
     eth_address: String,
-) -> Result<Response<CustomResponseMsg>> {
+) -> Result<Response<ExecutePalomaJob>> {
     // We need a valid looking eth address
     assert_eq!(
         hex::decode(eth_address.strip_prefix("0x").unwrap())
@@ -85,7 +86,7 @@ fn pick_winner(
     env: Env,
     info: MessageInfo,
     payload: Binary,
-) -> Result<Response<CustomResponseMsg>> {
+) -> Result<Response<ExecutePalomaJob>> {
     ensure_eq!(info.sender, ADMIN.load(deps.storage)?, eyre!("forbidden"));
 
     let mut paloma_winners = PALOMA_WINNERS.load(deps.storage)?;
@@ -109,7 +110,7 @@ fn pick_winner(
 
     let target_contract_info = TARGET_CONTRACT_INFO.load(deps.storage)?;
     Ok(Response::new()
-        .add_message(CosmosMsg::Custom(CustomResponseMsg {
+        .add_message(CosmosMsg::Custom(ExecutePalomaJob {
             target_contract_info,
             payload,
         }))

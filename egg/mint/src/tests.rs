@@ -2,9 +2,10 @@ use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{coins, Binary, DepsMut};
 use eyre::Result;
 use std::collections::HashMap;
+use xcci::TargetContractInfo;
 
 use crate::contract::{execute, instantiate, ENTRANCE_FEE};
-use crate::msg::{ExecuteMsg, InstantiateMsg, TargetContractInfo};
+use crate::msg::{ExecuteMsg, InstantiateMsg};
 
 fn add_entrant(deps: DepsMut, n: u16, funds: u128) -> Result<()> {
     execute(

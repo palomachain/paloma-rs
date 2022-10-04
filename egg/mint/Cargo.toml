@@ -21,6 +21,7 @@ hex.workspace = true
 rand = "0.8.5"
 schemars.workspace = true
 serde.workspace = true
+xcci.workspace = true
 
 [dev-dependencies]
 cosmwasm-schema = "1.0.0"
