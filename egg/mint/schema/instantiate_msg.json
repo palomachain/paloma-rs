@@ -12,6 +12,7 @@
   },
   "definitions": {
     "TargetContractInfo": {
+      "description": "Metadata necessary to call a specific contract.",
       "type": "object",
       "required": [
         "chain_id",
@@ -21,15 +22,19 @@
       ],
       "properties": {
         "chain_id": {
+          "description": "The chain id of the target chain, e.g. \"eth-main\".",
           "type": "string"
         },
         "compass_id": {
+          "description": "ID of the target chain's compass contract, e.g. \"50\".",
           "type": "string"
         },
         "contract_address": {
+          "description": "The address of the contract to run on the target chain, e.g. \"0xd58Dfd5b39fCe87dD9C434e95428DdB289934179\".",
           "type": "string"
         },
         "smart_contract_abi": {
+          "description": "The json encoded ABI of the contract on the target chain.",
           "type": "string"
         }
       }

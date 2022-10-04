@@ -10,10 +10,10 @@ homepage = "https://cosmwasm.com"
 documentation = "https://docs.cosmwasm.com"
 
 [dependencies]
-cw0 = "0.10.3"
-cosmwasm-std = "1.0.0"
+cw0.workspace = true
+cosmwasm-std.workspace = true
 schemars.workspace = true
 serde.workspace = true
 
 [dev-dependencies]
-cosmwasm-schema = "1.0.0"
+cosmwasm-schema.workspace = true

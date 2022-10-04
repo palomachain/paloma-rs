@@ -15,15 +15,15 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
-cosmwasm-std = "1.0.0"
-cosmwasm-storage = { version = "1.0.0" }
+cosmwasm-std.workspace = true
+cosmwasm-storage.workspace = true
 schemars.workspace = true
 serde.workspace = true
 thiserror.workspace = true
-k256 = { version = "0.9.4", default-features = false, features = ["ecdsa"] }
-getrandom = { version = "0.2.7", features = ["custom"] }
+k256.workspace = true
+getrandom.workspace = true
 sha3.workspace = true
-generic-array = "0.14.5"
+generic-array.workspace = true
 hex.workspace = true
 
 [dev-dependencies]

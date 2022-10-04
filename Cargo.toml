@@ -11,17 +11,40 @@ members = [
 [workspace.dependencies]
 anyhow = "1.0.65"
 assert_matches = "1.5.0"
+borsh = "0.9.3"
+borsh-derive = "0.9.3"
+bytemuck = "1.12.1"
+cosmwasm-schema = "1.0.0"
 cosmwasm-std = "1.0.0"
+cosmwasm-storage = "1.0.0"
+cosmwasm-vm = { version = "1.0.0", default-features = false }
+cw-multi-test = "0.13.4"
+cw-storage-plus = "0.13.4"
+cw0 = "0.10.3"
+cw1 = "0.13.4"
+cw2 = "0.13.4"
+cw20 = "0.13.4"
+cw20-base = { version = "0.13.4", features = ["library"] }
+cw20-wrapped-2 = { path = "wormhole/cw20-wrapped", features = ["library"] }
 ethabi = "17.2.0"
 eyre = "0.6.8"
+generic-array = "0.14.5"
+getrandom = { version = "0.2.7", features = ["custom"] }
 hex = "0.4.3"
+k256 = { version = "0.9.6", default-features = false, features = ["ecdsa"] }
+num-derive = "0.3.3"
+num-traits = "0.2.15"
 proptest = "1.0.0"
 protobuf = { version = "2.27.1", features = ["with-bytes"] }
+rand = "0.8.5"
 schemars = "0.8.10"
 serde = { version = "1.0.140", default-features = false, features = ["derive"] }
+serde_derive = "1.0.140"
 serde_json = "1.0.85"
 sha3 = "0.10.5"
+terraswap = "2.8.0"
 thiserror = "1.0.35"
+uint = "0.9.4"
 xcci = { path = "packages/xcci" }
 
 [profile.release]

@@ -13,7 +13,7 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
-cosmwasm-std = "1.0.0"
+cosmwasm-std.workspace = true
 eyre.workspace = true
 hex.workspace = true
 schemars.workspace = true
@@ -21,5 +21,5 @@ serde.workspace = true
 xcci.workspace = true
 
 [dev-dependencies]
-cosmwasm-schema = "1.0.0"
+cosmwasm-schema.workspace = true
 serde_json.workspace = true
