@@ -2,7 +2,6 @@ use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{coins, Binary, DepsMut};
 use eyre::Result;
 use std::collections::HashMap;
-use xcci::TargetContractInfo;
 
 use crate::contract::{execute, instantiate, ENTRANCE_FEE};
 use crate::msg::{ExecuteMsg, InstantiateMsg};
@@ -25,12 +24,7 @@ fn simple_contest() -> Result<()> {
     let mut deps = mock_dependencies();
 
     let msg = InstantiateMsg {
-        target_contract_info: TargetContractInfo {
-            chain_id: "".to_string(),
-            compass_id: "".to_string(),
-            contract_address: "".to_string(),
-            smart_contract_abi: "".to_string(),
-        },
+        job_id: "job".to_string(),
     };
     let info = mock_info("admin0000", &[]);
     let _ = instantiate(deps.as_mut(), mock_env(), info, msg)?;
@@ -86,12 +80,7 @@ fn simple_errors() -> Result<()> {
     let mut deps = mock_dependencies();
 
     let msg = InstantiateMsg {
-        target_contract_info: TargetContractInfo {
-            chain_id: "".to_string(),
-            compass_id: "".to_string(),
-            contract_address: "".to_string(),
-            smart_contract_abi: "".to_string(),
-        },
+        job_id: "job".to_string(),
     };
     let info = mock_info("admin0000", &[]);
     let _ = instantiate(deps.as_mut(), mock_env(), info, msg)?;

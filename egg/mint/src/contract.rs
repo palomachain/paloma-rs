@@ -1,5 +1,5 @@
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use crate::state::{ADMIN, ENTRANTS, ETH_WINNERS, PALOMA_WINNERS, TARGET_CONTRACT_INFO};
+use crate::state::{ADMIN, ENTRANTS, ETH_WINNERS, JOB_ID, PALOMA_WINNERS};
 use cosmwasm_std::{
     coin, ensure_eq, to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order,
     Response, StdResult,
@@ -28,7 +28,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     ADMIN.save(deps.storage, &info.sender)?;
-    TARGET_CONTRACT_INFO.save(deps.storage, &msg.target_contract_info)?;
+    JOB_ID.save(deps.storage, &msg.job_id)?;
     PALOMA_WINNERS.save(deps.storage, &HashSet::new())?;
     ETH_WINNERS.save(deps.storage, &HashSet::new())?;
     Ok(Response::new())
@@ -108,12 +108,9 @@ fn pick_winner(
     PALOMA_WINNERS.save(deps.storage, &paloma_winners)?;
     ETH_WINNERS.save(deps.storage, &eth_winners)?;
 
-    let target_contract_info = TARGET_CONTRACT_INFO.load(deps.storage)?;
+    let job_id = JOB_ID.load(deps.storage)?;
     Ok(Response::new()
-        .add_message(CosmosMsg::Custom(ExecutePalomaJob {
-            target_contract_info,
-            payload,
-        }))
+        .add_message(CosmosMsg::Custom(ExecutePalomaJob { job_id, payload }))
         .add_attribute("winning_paloma_address", &paloma_address)
         .add_attribute("winning_eth_address", &eth_address_str))
 }

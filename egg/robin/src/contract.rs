@@ -30,16 +30,8 @@ pub fn execute(
     _info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response<ExecutePalomaJob>> {
-    let ExecuteMsg::Call {
-        target_contract_info,
-        payload,
-    } = msg;
-    Ok(
-        Response::new().add_message(CosmosMsg::Custom(ExecutePalomaJob {
-            target_contract_info,
-            payload,
-        })),
-    )
+    let ExecuteMsg::Call { job_id, payload } = msg;
+    Ok(Response::new().add_message(CosmosMsg::Custom(ExecutePalomaJob { job_id, payload })))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
