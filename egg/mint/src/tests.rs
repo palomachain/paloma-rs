@@ -1,7 +1,7 @@
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{coins, Binary, DepsMut};
 use eyre::Result;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use xcci::TargetContractInfo;
 
 use crate::contract::{execute, instantiate, ENTRANCE_FEE};
@@ -45,7 +45,7 @@ fn simple_contest() -> Result<()> {
             payload: Binary(vec![]),
         },
     )?;
-    let attributes: HashMap<_, _> = r
+    let attributes: BTreeMap<_, _> = r
         .attributes
         .iter()
         .map(|att| (att.key.clone(), att.value.clone()))
@@ -66,7 +66,7 @@ fn simple_contest() -> Result<()> {
             payload: Binary(vec![]),
         },
     )?;
-    let attributes: HashMap<_, _> = r
+    let attributes: BTreeMap<_, _> = r
         .attributes
         .iter()
         .map(|att| (att.key.clone(), att.value.clone()))

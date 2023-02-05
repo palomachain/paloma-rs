@@ -1,8 +1,8 @@
 [package]
-name = "egg-mint"
+name = "simple-claims"
 version = "0.1.0"
 edition = "2021"
-description = "Mint Eggs on Ethereum"
+description = "For dictionary base claims/rewards."
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -17,10 +17,8 @@ cosmwasm-std.workspace = true
 cw-storage-plus.workspace = true
 eyre.workspace = true
 hex.workspace = true
-rand.workspace = true
 schemars.workspace = true
 serde.workspace = true
-xcci.workspace = true
 
 [dev-dependencies]
 cosmwasm-schema.workspace = true

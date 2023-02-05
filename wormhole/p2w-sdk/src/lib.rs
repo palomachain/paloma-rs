@@ -174,10 +174,9 @@ impl BatchPriceAttestation {
         bytes.read_exact(magic_vec.as_mut_slice())?;
 
         if magic_vec.as_slice() != P2W_MAGIC {
-            return Err(format!(
-                "Invalid magic {magic_vec:02X?}, expected {P2W_MAGIC:02X?}",
-            )
-            .into());
+            return Err(
+                format!("Invalid magic {magic_vec:02X?}, expected {P2W_MAGIC:02X?}",).into(),
+            );
         }
 
         let mut major_version_vec = vec![0u8; mem::size_of_val(&P2W_FORMAT_VER_MAJOR)];
