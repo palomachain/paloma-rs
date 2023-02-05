@@ -33,7 +33,7 @@ pub fn instantiate(
         total += amt;
     }
     ensure!(
-        &total == amount,
+        total == amount,
         "Provided funds must be exactly what is distributed."
     );
     BANK.save(deps.storage, &total)?;
