@@ -2,8 +2,6 @@
 resolver = "2"
 members = [
     "compass/*",
-    "dex-tokenomics/*",
-    "dex/*",
     "egg/*",
     "packages/*",
     "wormhole/*",

@@ -11,9 +11,9 @@ fn add_entrant(deps: DepsMut, n: u16, funds: u128) -> Result<()> {
     execute(
         deps,
         mock_env(),
-        mock_info(&format!("addr{:04}", n), &coins(funds, "ugrain")),
+        mock_info(&format!("addr{n:04}"), &coins(funds, "ugrain")),
         ExecuteMsg::LayEgg {
-            eth_address: format!("0x000000000000000000000000000000000000{:04}", n),
+            eth_address: format!("0x000000000000000000000000000000000000{n:04}"),
         },
     )?;
     Ok(())

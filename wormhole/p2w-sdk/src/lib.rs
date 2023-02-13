@@ -175,8 +175,7 @@ impl BatchPriceAttestation {
 
         if magic_vec.as_slice() != P2W_MAGIC {
             return Err(format!(
-                "Invalid magic {:02X?}, expected {:02X?}",
-                magic_vec, P2W_MAGIC,
+                "Invalid magic {magic_vec:02X?}, expected {P2W_MAGIC:02X?}",
             )
             .into());
         }
@@ -188,8 +187,7 @@ impl BatchPriceAttestation {
         // Major must match exactly
         if major_version != P2W_FORMAT_VER_MAJOR {
             return Err(format!(
-                "Unsupported format major_version {}, expected {}",
-                major_version, P2W_FORMAT_VER_MAJOR
+                "Unsupported format major_version {major_version}, expected {P2W_FORMAT_VER_MAJOR}"
             )
             .into());
         }
@@ -202,8 +200,7 @@ impl BatchPriceAttestation {
         #[allow(clippy::absurd_extreme_comparisons)]
         if minor_version < P2W_FORMAT_VER_MINOR {
             return Err(format!(
-                "Unsupported format minor_version {}, expected {} or more",
-                minor_version, P2W_FORMAT_VER_MINOR
+                "Unsupported format minor_version {minor_version}, expected {P2W_FORMAT_VER_MINOR} or more"
             )
             .into());
         }
@@ -398,7 +395,7 @@ impl PriceAttestation {
             a if a == PriceStatus::Halted as u8 => PriceStatus::Halted,
             a if a == PriceStatus::Auction as u8 => PriceStatus::Auction,
             other => {
-                return Err(format!("Invalid status value {}", other).into());
+                return Err(format!("Invalid status value {other}").into());
             }
         };
 
@@ -495,7 +492,7 @@ mod tests {
         println!("Regular: {:#?}", &attestation);
         println!("Hex: {:#02X?}", &attestation);
         let bytes = attestation.serialize();
-        println!("Hex Bytes: {:02X?}", bytes);
+        println!("Hex Bytes: {bytes:02X?}");
 
         assert_eq!(
             PriceAttestation::deserialize(bytes.as_slice())?,
@@ -525,10 +522,10 @@ mod tests {
         let batch_attestation = BatchPriceAttestation {
             price_attestations: attestations,
         };
-        println!("Batch hex struct: {:#02X?}", batch_attestation);
+        println!("Batch hex struct: {batch_attestation:#02X?}");
 
         let serialized = batch_attestation.serialize()?;
-        println!("Batch hex Bytes: {:02X?}", serialized);
+        println!("Batch hex Bytes: {serialized:02X?}");
 
         let deserialized: BatchPriceAttestation =
             BatchPriceAttestation::deserialize(serialized.as_slice())?;

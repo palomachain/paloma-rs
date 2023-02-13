@@ -315,8 +315,8 @@ fn handle_register_asset(
 
     Ok(Response::new()
         .add_attribute("action", "register_asset")
-        .add_attribute("token_chain", format!("{:?}", chain))
-        .add_attribute("token_address", format!("{:?}", token_address))
+        .add_attribute("token_chain", format!("{chain:?}"))
+        .add_attribute("token_address", format!("{token_address:?}"))
         .add_attribute("contract_addr", info.sender))
 }
 
@@ -344,13 +344,11 @@ fn handle_attest_meta(
 
     let token_address: [u8; 32] = match token_id {
         TokenId::Bank { denom } => Err(StdError::generic_err(format!(
-            "{} is native to this chain and should not be attested",
-            denom
+            "{denom} is native to this chain and should not be attested"
         ))),
         TokenId::Contract(ContractId::NativeCW20 { contract_address }) => {
             Err(StdError::generic_err(format!(
-                "Contract {} is native to this chain and should not be attested",
-                contract_address
+                "Contract {contract_address} is native to this chain and should not be attested"
             )))
         }
         TokenId::Contract(ContractId::ForeignToken {
@@ -1389,7 +1387,7 @@ fn query_transfer_info(deps: Deps, env: Env, vaa: &Binary) -> StdResult<Transfer
                 payload: info.payload,
             })
         }
-        other => Err(StdError::generic_err(format!("Invalid action: {}", other))),
+        other => Err(StdError::generic_err(format!("Invalid action: {other}"))),
     }
 }
 
