@@ -1,9 +1,8 @@
 [package]
-name = "cw20-wrapped-2"
+name = "signed_claims"
 version = "0.1.0"
-authors = ["Yuriy Savchenko <yuriy.savchenko@gmail.com>"]
 edition = "2021"
-description = "Wrapped CW20 token contract"
+description = "For registering rewards claims"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -15,11 +14,12 @@ library = []
 
 [dependencies]
 cosmwasm-std.workspace = true
-cosmwasm-storage.workspace = true
+cw-storage-plus.workspace = true
+eyre.workspace = true
+hex.workspace = true
 schemars.workspace = true
+serde-json-wasm = "0.5.0"
 serde.workspace = true
-cw2.workspace = true
-cw20.workspace = true
-cw20-base.workspace = true
-cw-storage-plus  = "0.13.4"
-thiserror.workspace = true
+
+[dev-dependencies]
+cosmwasm-schema.workspace = true
