@@ -25,10 +25,10 @@
     {
       "type": "object",
       "required": [
-        "total_claimed"
+        "claimed_rewards"
       ],
       "properties": {
-        "total_claimed": {
+        "claimed_rewards": {
           "type": "object",
           "required": [
             "address"
@@ -38,6 +38,30 @@
               "$ref": "#/definitions/Addr"
             }
           }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "total_claimed"
+      ],
+      "properties": {
+        "total_claimed": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "total_registered"
+      ],
+      "properties": {
+        "total_registered": {
+          "type": "object"
         }
       },
       "additionalProperties": false
