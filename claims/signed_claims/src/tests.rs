@@ -1,5 +1,5 @@
 use crate::contract::{execute, instantiate};
-use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
 use cosmwasm_std::{coins, Addr, BankMsg, CosmosMsg, Uint128};
 use eyre::Result;
 
@@ -7,7 +7,7 @@ use crate::msg::{ExecuteMsg, InstantiateMsg, TxMeta};
 
 #[test]
 fn full_flow() -> Result<()> {
-    let mut deps = mock_dependencies();
+    let mut deps = mock_dependencies_with_balance(&coins(15, "ucarrot"));
 
     let admin = Addr::unchecked("admin0000");
     let delegate = Addr::unchecked("delegate0000");
@@ -22,6 +22,21 @@ fn full_flow() -> Result<()> {
     };
     let info = mock_info(admin.as_str(), &coins(15, "ucarrot"));
     instantiate(deps.as_mut(), mock_env(), info, msg)?;
+
+    // Check that we can't overcommit.
+    //let r = execute(
+    //    mock_dependencies_with_balance(&coins(15, "ucarrot")).as_mut(),
+    //    mock_env(),
+    //    mock_info(delegate.as_str(), &[]),
+    //    ExecuteMsg::Register {
+    //        tx_meta: TxMeta {
+    //            address: p1.clone(),
+    //            amount: Uint128::from(100u8),
+    //            tx_hash: "abc".to_string(),
+    //        },
+    //    },
+    //);
+    //assert!(r.is_err());
 
     execute(
         deps.as_mut(),
